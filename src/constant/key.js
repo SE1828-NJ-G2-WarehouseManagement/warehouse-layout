@@ -1,0 +1,8 @@
+const ROLE = {
+    STAFF_WAREHOUSE: 'WAREHOUSE_STAFF',
+    MANAGER_WAREHOUSE: 'WAREHOUSE_MANAGER',
+}
+
+export {
+    ROLE
+}
