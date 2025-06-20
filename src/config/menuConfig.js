@@ -9,16 +9,18 @@ import {
   ArrowRightLeft,
   AlertTriangle,
   ShoppingCart,
-  FileText
+  FileText,
+  Factory,
+  Tags
 } from 'lucide-react';
 
-// Menu items configuration based on user roles
 export const getMenuItems = (role) => {
   const commonItems = [
     {
       key: 'dashboard',
       icon: Home,
       label: 'Tổng quan',
+      path: '/dashboard'
     }
   ];
 
@@ -79,30 +81,67 @@ export const getMenuItems = (role) => {
     return [
       ...commonItems,
       {
-        key: 'inventory',
+        key: 'zone',
         icon: Package,
-        label: 'Danh sách hàng hóa',
+        label: 'Danh sách Zone',
+        path: '/zoneList'
       },
       {
         key: 'import',
         icon: ShoppingCart,
         label: 'Nhập kho',
+        path: '/importTransaction'
       },
       {
         key: 'export',
         icon: FileText,
         label: 'Xuất kho',
+        path: '/exportTransaction'
+      },
+      {
+        key: 'supplier',
+        icon: Factory,
+        label: 'Quản lý nhà sản xuất',
+      },
+      {
+        key: 'customer',
+        icon: Users,
+        label: 'Quản lý khách hàng',
+      },
+      {
+        key: 'product',
+        icon: Package,
+        label: 'Quản lý sản phẩm',
+      },
+      {
+        key: 'category',
+        icon: Tags,
+        label: 'Quản lý danh mục',
       },
       {
         key: 'expired',
         icon: AlertTriangle,
         label: 'Hàng hết hạn',
+        path: '/expiredProductsList'
       },
       {
         key: 'transfer',
         icon: ArrowRightLeft,
-        label: 'Chuyển kho',
+        label: 'Chuyển kho nội bộ',
+        children: [
+          {
+            key: 'transfer-between-zones',
+            label: 'Chuyển giữa Zone',
+            path: '/transfer/zone'
+          },
+          {
+            key: 'transfer-between-warehouses',
+            label: 'Chuyển giữa Kho',
+            path: '/transfer/warehouse'
+          }
+        ]
       }
+
     ];
   }
 };

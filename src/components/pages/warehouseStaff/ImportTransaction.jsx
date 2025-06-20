@@ -1,0 +1,374 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  FilePlus,
+  CircleCheck,
+  CircleX,
+  AlertTriangle,
+  Info,
+  CalendarDays,
+  Package,
+  ShoppingCart,
+  Warehouse,
+  User,
+  Hash,
+  PlusCircle,
+  Trash2,
+  Weight // New icon for weight
+} from 'lucide-react';
+
+const ImportTransaction = () => {
+  // --- Mock Data ---
+  const initialSuppliers = [
+    { id: 'SUP001', name: 'Công ty TNHH ABC Tech' },
+    { id: 'SUP002', name: 'Cửa hàng Điện tử XYZ' },
+    { id: 'SUP003', name: 'Nhà phân phối Linh kiện Số' },
+  ];
+
+  // Added density (kg/unit) to products
+  const initialProducts = [
+    { id: 'PROD001', name: 'Laptop Dell XPS 15', density: 2.0 },
+    { id: 'PROD002', name: 'Màn hình LG UltraWide', density: 4.5 },
+    { id: 'PROD003', name: 'Bàn phím cơ Anne Pro 2', density: 1.2 },
+    { id: 'PROD004', name: 'Chuột Logitech MX Master 3', density: 0.2 },
+    { id: 'PROD005', name: 'Ổ cứng SSD Samsung 1TB', density: 0.1 },
+    { id: 'PROD006', name: 'Tai nghe Sony WH-1000XM4', density: 0.3 },
+    { id: 'PROD007', name: 'Router Wifi TP-Link AX1800', density: 0.8 },
+    { id: 'PROD008', name: 'Webcam Logitech C920', density: 0.15 },
+  ];
+
+  // Added capacity (kg) to zones
+  const initialZones = [
+    { id: 'ZONE-A', name: 'Khu A (Điện tử)', capacity: 1000 },
+    { id: 'ZONE-B', name: 'Khu B (Linh kiện)', capacity: 500 },
+    { id: 'ZONE-C', name: 'Khu C (Hàng cồng kềnh)', capacity: 2000 },
+  ];
+
+  const [transactionId] = useState('IM' + Date.now().toString().slice(-6));
+  const [date] = useState(new Date().toISOString().slice(0, 10));
+  const [supplierId, setSupplierId] = useState('');
+  const [zoneId, setZoneId] = useState('');
+  // const [notes, setNotes] = useState(''); // Removed notes state
+
+  // Update product structure to include density and name for display
+  const [products, setProducts] = useState([{ productId: '', quantity: '', expiryDate: '', density: 0, name: '' }]);
+
+  const [messages, setMessages] = useState({ type: '', text: '' });
+  const [errors, setErrors] = useState({});
+
+  const [selectedZone, setSelectedZone] = useState(null);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+
+  // Use a map for quick product lookup by ID
+  const productMap = useMemo(() => {
+    return new Map(initialProducts.map(p => [p.id, p]));
+  }, []);
+
+  // Update selectedZone when zoneId changes
+  useEffect(() => {
+    setSelectedZone(initialZones.find(z => z.id === zoneId) || null);
+  }, [zoneId]);
+
+  // Update selectedSupplier when supplierId changes
+  useEffect(() => {
+    setSelectedSupplier(initialSuppliers.find(s => s.id === supplierId) || null);
+  }, [supplierId]);
+
+
+  const handleProductChange = (index, field, value) => {
+    const updated = [...products];
+    if (field === 'productId') {
+      const productInfo = productMap.get(value);
+      updated[index] = {
+        ...updated[index],
+        productId: value,
+        name: productInfo ? productInfo.name : '',
+        density: productInfo ? productInfo.density : 0,
+      };
+    } else {
+      updated[index][field] = value;
+    }
+    setProducts(updated);
+  };
+
+  const addProductRow = () => {
+    setProducts([...products, { productId: '', quantity: '', expiryDate: '', density: 0, name: '' }]);
+    setErrors(prev => ({ ...prev, productErrors: [] })); // Clear product errors when adding new row
+  };
+
+  const removeProductRow = (index) => {
+    const updated = products.filter((_, i) => i !== index);
+    setProducts(updated);
+    // Also clear errors for the removed row
+    setErrors(prev => {
+      const newProductErrors = [...(prev.productErrors || [])];
+      newProductErrors.splice(index, 1);
+      return { ...prev, productErrors: newProductErrors };
+    });
+  };
+
+  // Calculate total weight of all products in the list
+  const totalWeight = useMemo(() => {
+    return products.reduce((sum, item) => {
+      const quantity = parseFloat(item.quantity) || 0;
+      const density = parseFloat(item.density) || 0;
+      return sum + (quantity * density);
+    }, 0);
+  }, [products]);
+
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setMessages({});
+    let newErrors = {};
+    let hasError = false;
+
+    // Validate main fields
+    if (!supplierId) {
+      newErrors.supplierId = 'Vui lòng chọn nhà cung cấp.';
+      hasError = true;
+    }
+    if (!zoneId) {
+      newErrors.zoneId = 'Vui lòng chọn khu vực.';
+      hasError = true;
+    }
+
+    // Validate products and collect product-specific errors
+    const productErrors = products.map((p, index) => {
+      const errs = {};
+      if (!p.productId) errs.productId = 'Vui lòng chọn sản phẩm.';
+      if (!p.quantity || parseFloat(p.quantity) <= 0) errs.quantity = 'Số lượng không hợp lệ (> 0).';
+      if (!p.expiryDate) errs.expiryDate = 'Vui lòng chọn ngày hết hạn.';
+      if (Object.keys(errs).length > 0) hasError = true; // Mark overall form as having errors
+      return errs;
+    });
+
+    if (products.length === 0) {
+      newErrors.products = 'Vui lòng thêm ít nhất một sản phẩm.';
+      hasError = true;
+    }
+
+    // Weight capacity validation (BR: If total weight exceeds zone capacity, prevent import)
+    if (selectedZone && totalWeight > selectedZone.capacity) {
+      newErrors.weightCapacity = `Tổng khối lượng (${totalWeight.toFixed(2)}) vượt quá sức chứa của khu vực (${selectedZone.capacity}).`;
+      hasError = true;
+    }
+
+
+    setErrors({ ...newErrors, productErrors });
+
+    if (hasError) {
+      setMessages({ type: 'error', text: 'Vui lòng kiểm tra lại thông tin bị lỗi.' });
+      return;
+    }
+
+    // If no errors, proceed with simulated save
+    setMessages({ type: 'success', text: 'Giao dịch nhập kho đã được lưu thành công (giả lập).' });
+    console.log('Import Transaction Data:', {
+      transactionId,
+      date,
+      supplierId,
+      zoneId,
+      // notes, // Removed notes from console log
+      products,
+      totalWeight: totalWeight.toFixed(2), // Removed 'kg'
+      zoneCapacity: selectedZone ? selectedZone.capacity : 'N/A' // Removed 'kg'
+    });
+
+    // Optionally reset form after successful submission
+    // setSupplierId('');
+    // setZoneId('');
+    // setProducts([{ productId: '', quantity: '', expiryDate: '', density: 0, name: '' }]);
+    // setSelectedZone(null);
+    // setSelectedSupplier(null);
+  };
+
+  return (
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="flex items-center space-x-3 mb-6">
+        <FilePlus className="text-blue-600" size={28} />
+        <h1 className="text-3xl font-bold text-gray-800">Tạo Phiếu Nhập Kho</h1>
+      </div>
+
+      {/* Message */}
+      {messages.text && (
+        <div className={`p-4 rounded-md flex items-center gap-2 ${messages.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {messages.type === 'success' ? <CircleCheck size={20} /> : <AlertTriangle size={20} />}
+          <span className="font-medium">{messages.text}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-lg space-y-8">
+        {/* Transaction Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center"><Hash className="mr-1" size={16} /> Mã giao dịch</label>
+            <input value={transactionId} readOnly className="w-full bg-gray-100 rounded-md p-2.5 text-gray-700 font-mono" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center"><CalendarDays className="mr-1" size={16} /> Ngày</label>
+            <input type="date" value={date} readOnly className="w-full bg-gray-100 rounded-md p-2.5 text-gray-700" />
+          </div>
+        </div>
+
+        {/* Supplier & Zone */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label htmlFor="supplier" className="block text-sm font-medium text-gray-700 mb-1 flex items-center"><User className="mr-1" size={16} /> Nhà cung cấp <span className="text-red-500">*</span></label>
+            <select
+              id="supplier"
+              value={supplierId}
+              onChange={e => setSupplierId(e.target.value)}
+              className={`w-full p-2.5 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${errors.supplierId ? 'border-red-500' : 'border-gray-300'}`}
+            >
+              <option value="">-- Chọn nhà cung cấp --</option>
+              {initialSuppliers.map(supplier => (
+                <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+              ))}
+            </select>
+            {errors.supplierId && <p className="text-red-500 text-sm mt-1">{errors.supplierId}</p>}
+          </div>
+          <div>
+            <label htmlFor="zone" className="block text-sm font-medium text-gray-700 mb-1 flex items-center"><Warehouse className="mr-1" size={16} /> Khu vực nhập <span className="text-red-500">*</span></label>
+            <select
+              id="zone"
+              value={zoneId}
+              onChange={e => setZoneId(e.target.value)}
+              className={`w-full p-2.5 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${errors.zoneId ? 'border-red-500' : 'border-gray-300'}`}
+            >
+              <option value="">-- Chọn khu vực --</option>
+              {initialZones.map(zone => (
+                <option key={zone.id} value={zone.id}>{zone.name} (Sức chứa: {zone.capacity})</option>
+              ))}
+            </select>
+            {errors.zoneId && <p className="text-red-500 text-sm mt-1">{errors.zoneId}</p>}
+            {selectedZone && (
+              <p className="text-sm text-gray-600 mt-1">Sức chứa tối đa của khu vực: {selectedZone.capacity}</p>
+            )}
+            {errors.weightCapacity && <p className="text-red-500 text-sm mt-1 flex items-center"><AlertTriangle size={14} className="mr-1"/>{errors.weightCapacity}</p>}
+          </div>
+        </div>
+
+        {/* Notes section removed completely */}
+        {/* <div>
+          <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">Ghi chú</label>
+          <textarea
+            id="notes"
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            rows="3"
+            className="w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Thêm ghi chú về giao dịch nhập kho..."
+          ></textarea>
+        </div> */}
+
+        <hr className="my-6 border-t border-gray-200" />
+
+        {/* Product List Header */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-gray-800 flex items-center"><ShoppingCart className="mr-2" size={22} /> Danh sách sản phẩm nhập</h3>
+          <button
+            type="button"
+            onClick={addProductRow}
+            className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium transition-colors duration-200"
+          >
+            <PlusCircle size={18} /> Thêm sản phẩm
+          </button>
+        </div>
+
+        {errors.products && <p className="text-red-500 text-sm mt-2">{errors.products}</p>}
+
+        <div className="space-y-6">
+          {products.map((product, index) => (
+            <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sản phẩm <span className="text-red-500">*</span></label>
+                <select
+                  value={product.productId}
+                  onChange={e => handleProductChange(index, 'productId', e.target.value)}
+                  className={`w-full p-2.5 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${errors.productErrors?.[index]?.productId ? 'border-red-500' : 'border-gray-300'}`}
+                >
+                  <option value="">-- Chọn sản phẩm --</option>
+                  {initialProducts.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                {errors.productErrors?.[index]?.productId && (
+                  <p className="text-red-500 text-xs mt-1">{errors.productErrors[index].productId}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Khối lượng (mỗi SP)</label>
+                <input
+                  type="text"
+                  value={product.density ? product.density.toFixed(2) : 'N/A'}
+                  readOnly
+                  className="w-full bg-gray-100 rounded-md p-2.5 text-gray-700 cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Số lượng <span className="text-red-500">*</span></label>
+                <input
+                  type="number"
+                  min="1"
+                  value={product.quantity}
+                  onChange={e => handleProductChange(index, 'quantity', e.target.value)}
+                  className={`w-full p-2.5 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${errors.productErrors?.[index]?.quantity ? 'border-red-500' : 'border-gray-300'}`}
+                />
+                {errors.productErrors?.[index]?.quantity && (
+                  <p className="text-red-500 text-xs mt-1">{errors.productErrors[index].quantity}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hết hạn <span className="text-red-500">*</span></label>
+                <input
+                  type="date"
+                  value={product.expiryDate}
+                  onChange={e => handleProductChange(index, 'expiryDate', e.target.value)}
+                  className={`w-full p-2.5 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${errors.productErrors?.[index]?.expiryDate ? 'border-red-500' : 'border-gray-300'}`}
+                />
+                {errors.productErrors?.[index]?.expiryDate && (
+                  <p className="text-red-500 text-xs mt-1">{errors.productErrors[index].expiryDate}</p>
+                )}
+              </div>
+
+              <div className="flex justify-center items-center h-full">
+                {products.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeProductRow(index)}
+                    className="p-2.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
+                    title="Xóa sản phẩm"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-between items-center bg-blue-50 p-4 rounded-lg">
+          <span className="text-lg font-semibold text-blue-800 flex items-center">
+            <Weight size={20} className="mr-2" />Tổng khối lượng nhập:
+          </span>
+          <span className="text-xl font-bold text-blue-900">{totalWeight.toFixed(2)}</span>
+        </div>
+
+        <div className="flex justify-end pt-4 border-t border-gray-200 mt-6">
+          <button
+            type="submit"
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold text-lg transition-colors duration-200"
+          >
+            <CircleCheck size={20} /> Lưu Giao Dịch
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default ImportTransaction;
