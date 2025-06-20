@@ -3,7 +3,7 @@ import axios from 'axios';
 const token = localStorage.getItem('token');
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:9999/api/v1', // replace with your API
+  baseURL: 'http://localhost:8080/api/v1', // replace with your API
   headers: {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
