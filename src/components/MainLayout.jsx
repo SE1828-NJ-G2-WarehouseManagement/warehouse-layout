@@ -22,6 +22,12 @@ const MainLayout = () => {
       '/exportTransaction': 'export',
       '/expiredProductsList': 'expired',
       '/zoneList': 'zone',
+      '/internalZoneTransfer': 'transferZone',
+      '/internalWarehouseTransfer': 'transferWarehouse',
+      '/suppliers': 'supplier',
+      '/categories': 'category',
+      '/customers': 'customer',
+      '/products': 'product',
     };
 
     const pathname = location.pathname;
@@ -62,6 +68,12 @@ const MainLayout = () => {
             export: '/exportTransaction',
             expired: '/expiredProductsList',
             zone: '/zoneList',
+            transferZone: '/internalZoneTransfer',
+            transferWarehouse: '/internalWarehouseTransfer',
+            supplier: '/suppliers',
+            category: '/categories',
+            customer: '/customers',
+            product: '/products'
           };
           if (keyToPath[key]) {
             navigate(keyToPath[key]);

@@ -1,24 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Truck, CheckCircle, XCircle, Ban, ArrowRight, ClipboardPenLine, PlusCircle, Trash2, Package } from 'lucide-react';
-import Notification from '../../common/Notification';
+
+// A simple mock Notification component
+const Notification = ({ notification }) => {
+  if (!notification) return null;
+
+  const { type, message, description } = notification;
+
+  const bgColor = type === 'success' ? 'bg-green-100' : type === 'error' ? 'bg-red-100' : 'bg-blue-100';
+  const textColor = type === 'success' ? 'text-green-800' : type === 'error' ? 'text-red-800' : 'text-blue-800';
+  const borderColor = type === 'success' ? 'border-green-300' : type === 'error' ? 'border-red-300' : 'border-blue-300';
+  const iconColor = type === 'success' ? 'text-green-500' : type === 'error' ? 'text-red-500' : 'text-blue-500';
+
+  return (
+    <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg ${bgColor} ${textColor} border ${borderColor} flex items-center z-50 animate-fade-in-up`}>
+      {type === 'success' && <CheckCircle className={`w-6 h-6 mr-3 ${iconColor}`} />}
+      {type === 'error' && <XCircle className={`w-6 h-6 mr-3 ${iconColor}`} />}
+      {type === 'info' && <Info className={`w-6 h-6 mr-3 ${iconColor}`} />}
+      <div>
+        <p className="font-semibold">{message}</p>
+        {description && <p className="text-sm">{description}</p>}
+      </div>
+    </div>
+  );
+};
 
 const ExportTransaction = () => {
   const initialProductsInStock = [
-    { id: 'PROD001', name: 'Laptop Dell XPS 15', availableStock: 50 },
-    { id: 'PROD002', name: 'Màn hình LG UltraWide', availableStock: 30 },
-    { id: 'PROD003', name: 'Bàn phím cơ Anne Pro 2', availableStock: 80 },
-    { id: 'PROD004', name: 'Chuột Logitech MX Master 3', availableStock: 120 },
-    { id: 'PROD005', name: 'Ổ cứng SSD Samsung 1TB', availableStock: 75 },
-    { id: 'PROD006', name: 'Tai nghe Sony WH-1000XM4', availableStock: 40 },
-    { id: 'PROD007', name: 'Router Wifi TP-Link AX1800', availableStock: 60 },
-    { id: 'PROD008', name: 'Webcam Logitech C920', availableStock: 90 },
+    { id: 'PROD001', name: 'Dell XPS 15 Laptop', availableStock: 50 },
+    { id: 'PROD002', name: 'LG UltraWide Monitor', availableStock: 30 },
+    { id: 'PROD003', name: 'Anne Pro 2 Mechanical Keyboard', availableStock: 80 },
+    { id: 'PROD004', name: 'Logitech MX Master 3 Mouse', availableStock: 120 },
+    { id: 'PROD005', name: 'Samsung 1TB SSD', availableStock: 75 },
+    { id: 'PROD006', name: 'Sony WH-1000XM4 Headphone', availableStock: 40 },
+    { id: 'PROD007', name: 'TP-Link AX1800 Wifi Router', availableStock: 60 },
+    { id: 'PROD008', name: 'Logitech C920 Webcam', availableStock: 90 },
   ];
 
   const initialCustomers = [
-    { id: 'CUST001', name: 'Nguyễn Văn A', address: '123 Đường ABC, Quận 1, TP.HCM' },
-    { id: 'CUST002', name: 'Trần Thị B', address: '456 Đường XYZ, Quận Ba Đình, Hà Nội' },
-    { id: 'CUST003', name: 'Lê Văn C', address: '789 Phố KLM, Quận Hải Châu, Đà Nẵng' },
-    { id: 'CUST004', name: 'Phạm Thị D', address: '101 Đường PQR, Quận Ninh Kiều, Cần Thơ' },
+    { id: 'CUST001', name: 'Nguyen Van A', address: '123 ABC Street, District 1, HCMC' },
+    { id: 'CUST002', name: 'Tran Thi B', address: '456 XYZ Street, Ba Dinh District, Hanoi' },
+    { id: 'CUST003', name: 'Le Van C', address: '789 KLM Street, Hai Chau District, Da Nang' },
+    { id: 'CUST004', name: 'Pham Thi D', address: '101 PQR Street, Ninh Kieu District, Can Tho' },
   ];
 
   const getTodayDate = () => {
@@ -41,6 +64,7 @@ const ExportTransaction = () => {
     quantity: '',
   });
 
+  // State to manage actual stock, allowing updates after export
   const [productsInStock, setProductsInStock] = useState(initialProductsInStock);
 
   const [selectedProductToAdd, setSelectedProductToAdd] = useState(null);
@@ -54,14 +78,14 @@ const ExportTransaction = () => {
 
   const showNotification = (type, message, description) => {
     setNotification({ type, message, description });
-    setTimeout(() => setNotification(null), 3000);
+    setTimeout(() => setNotification(null), 3000); // Notification disappears after 3 seconds
   };
 
   const handleGeneralChange = (e) => {
     const { name, value } = e.target;
     setGeneralFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors(prev => ({ ...prev, [name]: '' })); // Clear error when input changes
     }
 
     if (name === 'customerId') {
@@ -74,12 +98,13 @@ const ExportTransaction = () => {
     const { name, value } = e.target;
     setCurrentItem(prev => ({ ...prev, [name]: value }));
     if (itemErrors[name]) {
-      setItemErrors(prev => ({ ...prev, [name]: '' }));
+      setItemErrors(prev => ({ ...prev, [name]: '' })); // Clear error when input changes
     }
 
     if (name === 'productId') {
       const product = productsInStock.find(p => p.id === value);
       setSelectedProductToAdd(product);
+      // Reset quantity when product changes
       setCurrentItem(prev => ({ ...prev, quantity: '' }));
     }
   };
@@ -88,15 +113,17 @@ const ExportTransaction = () => {
     let newErrors = {};
     let hasError = false;
 
+    // Validate product selection
     if (!currentItem.productId) {
-      newErrors.productId = 'Vui lòng chọn sản phẩm.';
+      newErrors.productId = 'Please select a product.';
       hasError = true;
     }
+    // Validate quantity input
     if (!currentItem.quantity) {
-      newErrors.quantity = 'Vui lòng nhập số lượng.';
+      newErrors.quantity = 'Please enter quantity.';
       hasError = true;
     } else if (isNaN(currentItem.quantity) || parseInt(currentItem.quantity) <= 0) {
-      newErrors.quantity = 'Số lượng phải là số nguyên dương.';
+      newErrors.quantity = 'Quantity must be a positive integer.';
       hasError = true;
     }
 
@@ -104,31 +131,34 @@ const ExportTransaction = () => {
 
     if (productToAdd && currentItem.quantity && parseInt(currentItem.quantity) > 0) {
       const requestedQuantity = parseInt(currentItem.quantity);
-      
+
+      // Check if requested quantity exceeds available stock
       if (requestedQuantity > productToAdd.availableStock) {
-        newErrors.quantity = `Số lượng xuất (${requestedQuantity}) vượt quá tồn kho hiện có (${productToAdd.availableStock}).`;
+        newErrors.quantity = `Export quantity (${requestedQuantity}) exceeds available stock (${productToAdd.availableStock}).`;
         hasError = true;
-        showNotification('error', 'Lỗi tồn kho', newErrors.quantity);
+        showNotification('error', 'Stock Error', newErrors.quantity);
       }
-      
+
+      // Check if adding to an existing item would exceed stock
       const existingItem = exportItems.find(item => item.productId === currentItem.productId);
       if (existingItem) {
-          const totalRequested = existingItem.quantity + requestedQuantity;
-          if (totalRequested > productToAdd.availableStock) {
-              newErrors.quantity = `Tổng số lượng sản phẩm này (${totalRequested}) vượt quá tồn kho (${productToAdd.availableStock}).`;
-              hasError = true;
-              showNotification('error', 'Lỗi tồn kho', newErrors.quantity);
-          }
+        const totalRequested = existingItem.quantity + requestedQuantity;
+        if (totalRequested > productToAdd.availableStock) {
+          newErrors.quantity = `Total quantity for this product (${totalRequested}) exceeds available stock (${productToAdd.availableStock}).`;
+          hasError = true;
+          showNotification('error', 'Stock Error', newErrors.quantity);
+        }
       }
     }
 
     setItemErrors(newErrors);
 
     if (hasError) {
-      showNotification('error', 'Lỗi thêm sản phẩm', 'Vui lòng kiểm tra lại thông tin sản phẩm muốn thêm.');
+      showNotification('error', 'Add Product Error', 'Please check the product information you want to add.');
       return;
     }
 
+    // Add or update item in export list
     const existingItemIndex = exportItems.findIndex(item => item.productId === currentItem.productId);
     if (existingItemIndex !== -1) {
       const updatedItems = [...exportItems];
@@ -141,11 +171,12 @@ const ExportTransaction = () => {
           productId: productToAdd.id,
           quantity: parseInt(currentItem.quantity),
           name: productToAdd.name,
-          initialStock: productToAdd.availableStock,
+          initialStock: productToAdd.availableStock, // Store initial stock for reference if needed
         }
       ]);
     }
 
+    // Clear current item selection
     setCurrentItem({ productId: '', quantity: '' });
     setSelectedProductToAdd(null);
     setItemErrors({});
@@ -153,19 +184,18 @@ const ExportTransaction = () => {
 
   const handleRemoveItem = (productId) => {
     setExportItems(prev => prev.filter(item => item.productId !== productId));
-    showNotification('info', 'Đã xóa', 'Sản phẩm đã được loại bỏ khỏi danh sách xuất.');
+    showNotification('info', 'Item Removed', 'Product has been removed from the export list.');
   };
 
   const validateForm = () => {
     let newErrors = {};
-    const today = new Date(getTodayDate());
-    today.setHours(0, 0, 0, 0);
+    // const today = new Date(getTodayDate()); // Not directly used in validation logic for date value, only for initialization
 
-    if (!generalFormData.customerId) newErrors.customerId = 'Vui lòng chọn khách hàng.';
-    
+    if (!generalFormData.customerId) newErrors.customerId = 'Please select a customer.';
+
     if (exportItems.length === 0) {
-      showNotification('error', 'Lỗi', 'Vui lòng thêm ít nhất một sản phẩm vào phiếu xuất.');
-      newErrors.exportItems = 'Phiếu xuất phải có ít nhất một sản phẩm.';
+      showNotification('error', 'Error', 'Please add at least one product to the export slip.');
+      newErrors.exportItems = 'Export slip must contain at least one product.';
     }
 
     setErrors(newErrors);
@@ -175,13 +205,14 @@ const ExportTransaction = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      setIsConfirming(true);
+      setIsConfirming(true); // Show confirmation modal
     }
   };
 
   const handleConfirmExport = () => {
-    setIsConfirming(false);
+    setIsConfirming(false); // Hide confirmation modal
 
+    // Update stock in mock data
     const updatedProductsInStock = productsInStock.map(p => {
       const exportedItem = exportItems.find(item => item.productId === p.id);
       if (exportedItem) {
@@ -191,8 +222,9 @@ const ExportTransaction = () => {
     });
     setProductsInStock(updatedProductsInStock);
 
-    showNotification('success', 'Xuất kho thành công', 'Phiếu xuất đã được ghi nhận (chỉ hiển thị frontend).');
+    showNotification('success', 'Export Successful', 'Export slip recorded (frontend display only).');
 
+    // Reset form
     setGeneralFormData({
       exportDate: getTodayDate(),
       customerId: '',
@@ -207,21 +239,21 @@ const ExportTransaction = () => {
 
   const handleCancelConfirmation = () => {
     setIsConfirming(false);
-    showNotification('info', 'Đã hủy', 'Giao dịch xuất kho đã được hủy.');
+    showNotification('info', 'Cancelled', 'Export transaction has been cancelled.');
   };
 
   return (
     <div className="container mx-auto p-6 bg-white rounded-lg shadow-lg">
       <h1 className="text-3xl font-bold text-gray-900 mb-8 flex items-center">
         <Truck className="mr-3" size={32} />
-        Tạo Phiếu Xuất Kho
+        Create Export Slip
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="exportDate" className="block text-sm font-medium text-gray-700 mb-1">
-              Ngày xuất
+              Export Date
             </label>
             <input
               type="date"
@@ -235,7 +267,7 @@ const ExportTransaction = () => {
 
           <div>
             <label htmlFor="customerId" className="block text-sm font-medium text-gray-700 mb-1">
-              Khách hàng <span className="text-red-500">*</span>
+              Customer <span className="text-red-500">*</span>
             </label>
             <select
               id="customerId"
@@ -246,7 +278,7 @@ const ExportTransaction = () => {
                 errors.customerId ? 'border-red-500' : ''
               }`}
             >
-              <option value="">-- Chọn khách hàng --</option>
+              <option value="">-- Select customer --</option>
               {initialCustomers.map(customer => (
                 <option key={customer.id} value={customer.id}>
                   {customer.name}
@@ -254,7 +286,6 @@ const ExportTransaction = () => {
               ))}
             </select>
             {errors.customerId && <p className="mt-1 text-sm text-red-600">{errors.customerId}</p>}
-            {/* Removed address display here */}
           </div>
         </div>
 
@@ -262,13 +293,13 @@ const ExportTransaction = () => {
 
         <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
           <Package className="mr-2" size={24} />
-          Thông tin sản phẩm xuất
+          Export Product Information
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
           <div>
             <label htmlFor="currentItemProductId" className="block text-sm font-medium text-gray-700 mb-1">
-              Chọn sản phẩm <span className="text-red-500">*</span>
+              Select Product <span className="text-red-500">*</span>
             </label>
             <select
               id="currentItemProductId"
@@ -279,7 +310,7 @@ const ExportTransaction = () => {
                 itemErrors.productId ? 'border-red-500' : ''
               }`}
             >
-              <option value="">-- Chọn sản phẩm --</option>
+              <option value="">-- Select product --</option>
               {productsInStock.map(product => (
                 <option key={product.id} value={product.id}>
                   {product.name}
@@ -291,8 +322,8 @@ const ExportTransaction = () => {
 
           <div>
             <label htmlFor="currentItemQuantity" className="block text-sm font-medium text-gray-700">
-              Số lượng <span className="text-red-500">*</span>
-              {selectedProductToAdd && <span className="ml-2 text-sm text-gray-500">(Tồn: {selectedProductToAdd.availableStock})</span>}
+              Quantity <span className="text-red-500">*</span>
+              {selectedProductToAdd && <span className="ml-2 text-sm text-gray-500">(Stock: {selectedProductToAdd.availableStock})</span>}
             </label>
             <input
               type="number"
@@ -304,7 +335,7 @@ const ExportTransaction = () => {
               className={`mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
                 itemErrors.quantity ? 'border-red-500' : ''
               }`}
-              placeholder="Nhập số lượng"
+              placeholder="Enter quantity"
               disabled={!selectedProductToAdd}
             />
             {itemErrors.quantity && <p className="mt-1 text-sm text-red-600">{itemErrors.quantity}</p>}
@@ -317,7 +348,7 @@ const ExportTransaction = () => {
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full justify-center"
             >
               <PlusCircle className="mr-2" size={20} />
-              Thêm sản phẩm
+              Add Product
             </button>
           </div>
         </div>
@@ -330,13 +361,13 @@ const ExportTransaction = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sản phẩm
+                    Product
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Số lượng xuất
+                    Export Quantity
                   </th>
                   <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Xóa</span>
+                    <span className="sr-only">Delete</span>
                   </th>
                 </tr>
               </thead>
@@ -354,7 +385,7 @@ const ExportTransaction = () => {
                         type="button"
                         onClick={() => handleRemoveItem(item.productId)}
                         className="text-red-600 hover:text-red-900"
-                        title="Xóa sản phẩm này"
+                        title="Delete this product"
                       >
                         <Trash2 size={20} />
                       </button>
@@ -373,7 +404,7 @@ const ExportTransaction = () => {
             disabled={exportItems.length === 0}
           >
             <ArrowRight className="mr-2" size={20} />
-            Tạo Phiếu Xuất Kho
+            Create Export Slip
           </button>
         </div>
       </form>
@@ -383,20 +414,19 @@ const ExportTransaction = () => {
           <div className="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full text-center">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center justify-center">
               <ClipboardPenLine className="mr-2 text-blue-500" size={24} />
-              Xác nhận Xuất kho
+              Confirm Export
             </h3>
             <p className="text-gray-700 mb-2">
-              **Ngày xuất:** {generalFormData.exportDate}
+              **Export Date:** {generalFormData.exportDate}
             </p>
             {selectedCustomer && (
               <p className="text-gray-700 mb-6">
-                **Khách hàng:** {selectedCustomer.name}
-                {/* Removed address from confirmation dialog */}
+                **Customer:** {selectedCustomer.name}
               </p>
             )}
-            
+
             <p className="text-gray-700 mb-2 font-semibold">
-              Các sản phẩm sẽ xuất:
+              Products to be exported:
             </p>
             <div className="max-h-60 overflow-y-auto mb-6 border border-gray-200 rounded-md p-3">
               <ul className="text-left text-gray-800">
@@ -413,14 +443,14 @@ const ExportTransaction = () => {
                 className="inline-flex items-center px-5 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
                 <CheckCircle className="mr-2" size={18} />
-                Xác nhận
+                Confirm
               </button>
               <button
                 onClick={handleCancelConfirmation}
                 className="inline-flex items-center px-5 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
               >
                 <Ban className="mr-2" size={18} />
-                Hủy bỏ
+                Cancel
               </button>
             </div>
           </div>

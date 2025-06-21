@@ -4,24 +4,24 @@ import { Warehouse, ArrowRight, Package } from 'lucide-react';
 
 const ZoneList = () => {
   const zones = [
-    { id: 'zone_a', name: 'Khu vực A (Điện tử)', description: 'Chứa các sản phẩm điện tử, máy tính, linh kiện.', totalProducts: 500 },
-    { id: 'zone_b', name: 'Khu vực B (Gia dụng)', description: 'Chứa các thiết bị gia dụng, đồ dùng nhà bếp.', totalProducts: 320 },
-    { id: 'zone_c', name: 'Khu vực C (Thực phẩm)', description: 'Chứa các mặt hàng thực phẩm đóng gói, đồ uống.', totalProducts: 800 },
-    { id: 'zone_d', name: 'Khu vực D (May mặc)', description: 'Chứa quần áo, phụ kiện thời trang.', totalProducts: 450 },
+    { id: 'zone_a', name: 'Zone A (Electronics)', description: 'Contains electronic devices, computers, and components.', totalProducts: 500 },
+    { id: 'zone_b', name: 'Zone B (Home Appliances)', description: 'Contains household appliances and kitchenware.', totalProducts: 320 },
+    { id: 'zone_c', name: 'Zone C (Food)', description: 'Contains packaged food and beverages.', totalProducts: 800 },
+    { id: 'zone_d', name: 'Zone D (Clothing)', description: 'Contains clothing and fashion accessories.', totalProducts: 450 },
   ];
 
   return (
     <div className="p-6 bg-white rounded-xl shadow-lg font-sans">
       <div className="flex items-center space-x-4 mb-8 pb-4 border-b border-gray-200">
         <Warehouse className="text-blue-600 size-8" />
-        <h2 className="text-3xl font-bold text-gray-800">Danh Sách Khu Vực Kho</h2>
+        <h2 className="text-3xl font-bold text-gray-800">Warehouse Zone List</h2>
       </div>
 
-      <p className="text-gray-600 mb-6">Chọn một khu vực để xem chi tiết các sản phẩm bên trong.</p>
+      <p className="text-gray-600 mb-6">Select a zone to view the list of products inside.</p>
 
       {zones.length === 0 ? (
         <div className="text-center py-10 text-gray-500">
-          <p className="text-lg">Hiện không có khu vực nào được định nghĩa.</p>
+          <p className="text-lg">No zones are currently defined.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -42,7 +42,7 @@ const ZoneList = () => {
               </p>
               <div className="flex items-center text-gray-600 text-sm">
                 <Package size={16} className="mr-2" />
-                <span>Tổng số sản phẩm: <span className="font-bold">{zone.totalProducts}</span></span>
+                <span>Total products: <span className="font-bold">{zone.totalProducts}</span></span>
               </div>
             </Link>
           ))}

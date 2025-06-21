@@ -19,7 +19,7 @@ export const getMenuItems = (role) => {
     {
       key: 'dashboard',
       icon: Home,
-      label: 'Tổng quan',
+      label: 'Dashboard',
       path: '/dashboard'
     }
   ];
@@ -30,22 +30,22 @@ export const getMenuItems = (role) => {
       {
         key: 'users',
         icon: Users,
-        label: 'Quản lý người dùng',
+        label: 'User Management',
       },
       {
         key: 'warehouses',
         icon: Warehouse,
-        label: 'Quản lý kho',
+        label: 'Warehouse Management',
       },
       {
         key: 'permissions',
         icon: Settings,
-        label: 'Phân quyền',
+        label: 'Role Permissions',
       },
       {
         key: 'reports',
         icon: BarChart3,
-        label: 'Báo cáo hệ thống',
+        label: 'System Reports',
       }
     ];
   } else if (role === 'Warehouse Manager') {
@@ -54,27 +54,27 @@ export const getMenuItems = (role) => {
       {
         key: 'zones',
         icon: Database,
-        label: 'Quản lý Zone',
+        label: 'Zone Management',
       },
       {
         key: 'inventory',
         icon: Package,
-        label: 'Hàng hóa',
+        label: 'Inventory',
       },
       {
         key: 'transactions',
         icon: ArrowRightLeft,
-        label: 'Nhập/Xuất kho',
+        label: 'Import/Export',
       },
       {
         key: 'expired',
         icon: AlertTriangle,
-        label: 'Hàng hết hạn',
+        label: 'Expired Products',
       },
       {
         key: 'reports',
         icon: BarChart3,
-        label: 'Báo cáo',
+        label: 'Reports',
       }
     ];
   } else {
@@ -83,65 +83,63 @@ export const getMenuItems = (role) => {
       {
         key: 'zone',
         icon: Package,
-        label: 'Danh sách Zone',
+        label: 'Zone List',
         path: '/zoneList'
       },
       {
         key: 'import',
         icon: ShoppingCart,
-        label: 'Nhập kho',
+        label: 'Import Products',
         path: '/importTransaction'
       },
       {
         key: 'export',
         icon: FileText,
-        label: 'Xuất kho',
+        label: 'Export Products',
         path: '/exportTransaction'
       },
       {
         key: 'supplier',
         icon: Factory,
-        label: 'Quản lý nhà sản xuất',
+        label: 'Supplier Management',
+        path: '/suppliers'
       },
       {
         key: 'customer',
         icon: Users,
-        label: 'Quản lý khách hàng',
+        label: 'Customer Management',
+        path: '/customers'
       },
       {
         key: 'product',
         icon: Package,
-        label: 'Quản lý sản phẩm',
+        label: 'Product Management',
+        path: '/products'
       },
       {
         key: 'category',
         icon: Tags,
-        label: 'Quản lý danh mục',
+        label: 'Category Management',
+        path: '/categories'
       },
       {
         key: 'expired',
         icon: AlertTriangle,
-        label: 'Hàng hết hạn',
+        label: 'Expired Products',
         path: '/expiredProductsList'
       },
       {
-        key: 'transfer',
+        key: 'transferZone',
         icon: ArrowRightLeft,
-        label: 'Chuyển kho nội bộ',
-        children: [
-          {
-            key: 'transfer-between-zones',
-            label: 'Chuyển giữa Zone',
-            path: '/transfer/zone'
-          },
-          {
-            key: 'transfer-between-warehouses',
-            label: 'Chuyển giữa Kho',
-            path: '/transfer/warehouse'
-          }
-        ]
+        label: 'Zone-to-Zone Transfer',
+        path: '/internalZoneTransfer'
+      },
+      {
+        key: 'transferWarehouse',
+        icon: ArrowRightLeft,
+        label: 'Warehouse-to-Warehouse Transfer',
+        path: '/internalWarehouseTransfer'
       }
-
     ];
   }
 };
