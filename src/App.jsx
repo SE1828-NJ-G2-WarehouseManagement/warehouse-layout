@@ -15,6 +15,12 @@ import ExportTransaction from './components/pages/warehouseStaff/ExportTransacti
 import ExpiredProductsList from './components/pages/warehouseStaff/ExpiredItems';
 import ZoneList from './components/pages/warehouseStaff/ZoneList';
 import ZoneProduct from './components/pages/warehouseStaff/ZoneProducts';
+import InternalZoneTransfer from './components/pages/warehouseStaff/InternalZoneTransfer';
+import InternalWarehouseTransfer from './components/pages/warehouseStaff/InternalWarehouseTransfer';
+import SupplierList from './components/pages/warehouseStaff/SupplierList';
+import CategoryList from './components/pages/warehouseStaff/CategoryList';
+import CustomerList from './components/pages/warehouseStaff/CustomerList';
+import ProductList from './components/pages/warehouseStaff/ProductList';
 
 export default function App() {
   return (
@@ -39,7 +45,13 @@ export default function App() {
             <Route path="/exportTransaction" element={<ExportTransaction />} />
             <Route path="/expiredProductsList" element={<ExpiredProductsList />} />
             <Route path="/zoneList" element={<ZoneList />} />
-            <Route path="zone/:zoneId" element={<ZoneProduct />} />
+            <Route path="/zone/:zoneId" element={<ZoneProduct />} />
+            <Route path= "/internalZoneTransfer" element={<InternalZoneTransfer />} />
+             <Route path= "/internalWarehouseTransfer" element={<InternalWarehouseTransfer />} />
+             <Route path= "/suppliers" element={<SupplierList />} />
+             <Route path="/categories" element={<CategoryList />} />
+             <Route path='/customers' element={<CustomerList />} />
+             <Route path= '/products' element={<ProductList />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

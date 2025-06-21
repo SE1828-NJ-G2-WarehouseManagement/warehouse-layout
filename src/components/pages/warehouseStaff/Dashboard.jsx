@@ -13,7 +13,7 @@ import {
 import { dashboardStats } from "../../../config/mockData";
 
 const generateMonthlyData = () => {
-  const months = Array.from({ length: 12 }, (_, i) => `Tháng ${i + 1}`);
+  const months = Array.from({ length: 12 }, (_, i) => `Month ${i + 1}`);
   return months.map(month => ({
     month,
     products: Math.floor(Math.random() * 500) + 100,
@@ -76,7 +76,7 @@ const Dashboard = () => {
       <div className="flex items-center space-x-3">
         <label htmlFor="date" className="font-medium text-gray-700 text-base flex items-center gap-2">
           <CalendarDays size={20} className="text-blue-500" />
-          Chọn ngày:
+          Select date:
         </label>
         <input
           type="date"
@@ -88,43 +88,43 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        <StatCard title="Tổng sản phẩm" value={filteredStats.products} colorClass="from-green-500 to-green-600" icon={<Package size={32} />} />
-        <StatCard title="Nhập kho" value={filteredStats.imports} colorClass="from-blue-500 to-blue-600" icon={<ShoppingCart size={32} />} />
-        <StatCard title="Xuất kho" value={filteredStats.exports} colorClass="from-orange-500 to-orange-600" icon={<FileText size={32} />} />
-        <StatCard title="Hết hạn" value={filteredStats.expired} colorClass="from-red-500 to-red-600" icon={<AlertTriangle size={32} />} />
-        <StatCard title="Tổng zone" value={filteredStats.zones} colorClass="from-purple-500 to-purple-600" icon={<LayoutGrid size={32} />} />
+        <StatCard title="Total Products" value={filteredStats.products} colorClass="from-green-500 to-green-600" icon={<Package size={32} />} />
+        <StatCard title="Imports" value={filteredStats.imports} colorClass="from-blue-500 to-blue-600" icon={<ShoppingCart size={32} />} />
+        <StatCard title="Exports" value={filteredStats.exports} colorClass="from-orange-500 to-orange-600" icon={<FileText size={32} />} />
+        <StatCard title="Expired" value={filteredStats.expired} colorClass="from-red-500 to-red-600" icon={<AlertTriangle size={32} />} />
+        <StatCard title="Total Zones" value={filteredStats.zones} colorClass="from-purple-500 to-purple-600" icon={<LayoutGrid size={32} />} />
       </div>
 
       <div className="mt-8">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Biểu đồ thống kê kho theo tháng</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Monthly Warehouse Statistics Chart</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <MonthlyBarChart
             data={monthlyStats}
             dataKey="products"
-            name="Tổng sản phẩm"
+            name="Total Products"
             color="#4CAF50"
-            title="Tổng sản phẩm theo tháng"
+            title="Total Products by Month"
           />
           <MonthlyBarChart
             data={monthlyStats}
             dataKey="imports"
-            name="Nhập kho"
+            name="Imports"
             color="#2196F3"
-            title="Nhập kho theo tháng"
+            title="Imports by Month"
           />
           <MonthlyBarChart
             data={monthlyStats}
             dataKey="exports"
-            name="Xuất kho"
+            name="Exports"
             color="#FF9800"
-            title="Xuất kho theo tháng"
+            title="Exports by Month"
           />
           <MonthlyBarChart
             data={monthlyStats}
             dataKey="expired"
-            name="Hết hạn"
+            name="Expired"
             color="#F44336"
-            title="Sản phẩm hết hạn theo tháng"
+            title="Expired Products by Month"
           />
         </div>
       </div>
