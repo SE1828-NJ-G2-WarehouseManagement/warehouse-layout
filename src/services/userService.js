@@ -96,8 +96,11 @@ class UserService {
   // @route   POST /api/v1/users/update-profile
   // @desc    update profile
   updateProfile = async (data) => {
-    const response = await axiosInstance.post(`${this.url}/update-profile`, data, {
-      requiresAuth: true
+    const response = await axiosInstance.put(`${this.url}/update-profile`, data, {
+      headers: {
+    'Content-Type': 'multipart/form-data'
+  },
+      requiresAuth: true,
     });
     const result = response.data;
 
