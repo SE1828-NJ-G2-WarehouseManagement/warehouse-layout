@@ -21,6 +21,7 @@ const Sidebar = ({ collapsed, user, selectedKey, setSelectedKey }) => {
       <nav className="mt-4">
         {getMenuItems(user?.role).map((item) => {
           const IconComponent = item.icon;
+          console.log("selectedKey",selectedKey,item.key)
           return (
             <button
               key={item.key}

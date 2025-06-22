@@ -4,26 +4,20 @@ import Notification from './common/Notification';
 import Sidebar from './common/Sidebar';
 import Header from './common/Header';
 
-// import ManagerDashboard from './pages/warehouseManager/Dashboard';
-// import ReviewImportTransaction from './pages/warehouseManager/ReviewImportTransaction';
-// import ReviewExportTransaction from './pages/warehouseManager/ReviewExportTransaction';
-// import ManagerInventory from './pages/warehouseManager/Inventory';
-// import ManagerReports from './pages/warehouseManager/Reports';
-
-// import ZoneList from './pages/warehouseStaff/ZoneList';
-// import ExpiredProductsList from './pages/warehouseStaff/ExpiredItems';
-// import SupplierList from './pages/warehouseStaff/SupplierList';
-// import CategoryList from './pages/warehouseStaff/CategoryList';
-// import CustomerList from './pages/warehouseStaff/CustomerList';
-// import ProductList from './pages/warehouseStaff/ProductList';
-// import InternalZoneTransfer from './pages/warehouseStaff/InternalZoneTransfer';
-// import InternalWarehouseTransfer from './pages/warehouseStaff/InternalWarehouseTransfer';
+import ManagerDashboard from './pages/warehouseManager/Dashboard';
+import ZoneManagement from './pages/warehouseManager/ZoneManagement';
 
 import Profile from './common/Profile';
 
 
 import { useAuth } from '../hooks/useAuth';
 import Settings from './common/Settings';
+import SupplierManagement from './pages/warehouseManager/SupplierManagement';
+import CategoryManagement from './pages/warehouseManager/CategoryManagement';
+import ProductManagement from './pages/warehouseManager/ProductManagement';
+import IncomingShipmentsApproval from './pages/warehouseManager/IncomingShipmentsApproval';
+import ImportExportHistory from './pages/warehouseManager/ImportExportHistory';
+
 
 const ManagerMainLayout = () => {
   const navigate = useNavigate();
@@ -38,17 +32,17 @@ const ManagerMainLayout = () => {
     const pathToKey = {
       '/dashboard': 'dashboard',
       '/zoneList': 'zones',
-      '/inventoryOverview': 'inventory',
-      '/reviewImportRequests': 'importReview',
-      '/reviewExportRequests': 'exportReview',
-      '/manageExpiredProducts': 'expiredProducts',
-      '/reviewInternalZoneTransfer': 'transferZoneReview',
-      '/reviewInternalWarehouseTransfer': 'transferWarehouseReview',
+      '/importExportHistory': 'importExport',
+      // '/reviewImportRequests': 'importReview',
+      // '/reviewExportRequests': 'exportReview',
+      '/incomingShipment': 'incomingShipment',
+      // '/reviewInternalZoneTransfer': 'transferZoneReview',
+      // '/reviewInternalWarehouseTransfer': 'transferWarehouseReview',
       '/suppliers': 'supplierManagement',
-      '/customers': 'customerManagement',
+      // '/customers': 'customerManagement',
       '/products': 'productManagement',
-      '/categories': 'categoryManagement',
-      '/reports': 'reports',
+      '/categories': 'categoriesManagement',
+      // '/reports': 'reports',
       '/profile': 'profile',
       '/settings': 'settings',
     };
@@ -60,11 +54,12 @@ const ManagerMainLayout = () => {
         matchedKey = pathToKey[path];
         break;
       } else if (path.includes(':') && pathname.startsWith(path.substring(0, path.indexOf(':')))) {
+        // eslint-disable-next-line no-unused-vars
         matchedKey = pathToKey[path];
         break;
       }
-    }
-    setSelectedKey(matchedKey);
+    } 
+    // setSelectedKey(matchedKey);
   }, [location.pathname]);
 
   const showNotification = (type, message, description) => {
@@ -74,7 +69,7 @@ const ManagerMainLayout = () => {
 
   const handleLogout = () => {
     setShowUserMenu(false);
-    showNotification('info', 'Đăng xuất thành công', 'Hẹn gặp lại!');
+    showNotification('info', 'Logout successfully', 'See you again!');
     setTimeout(() => {
       logout();
       navigate('/login');
@@ -93,18 +88,18 @@ const ManagerMainLayout = () => {
           setSelectedKey(key);
           const keyToPath = {
             dashboard: '/dashboard',
-            zones: '/zoneList',
-            inventory: '/inventoryOverview',
-            importReview: '/reviewImportRequests',
-            exportReview: '/reviewExportRequests',
-            expiredProducts: '/manageExpiredProducts',
-            transferZoneReview: '/reviewInternalZoneTransfer',
-            transferWarehouseReview: '/reviewInternalWarehouseTransfer',
-            supplierManagement: '/suppliers',
-            customerManagement: '/customers',
-            productManagement: '/products',
-            categoryManagement: '/categories',
-            reports: '/reports',
+            zones: '/zone-management',
+            importExportHistory: '/import-export',
+            // importReview: '/reviewImportRequests',
+            // exportReview: '/reviewExportRequests',
+            incomingShipment: '/incoming-shipment',
+            // transferZoneReview: '/reviewInternalZoneTransfer',
+            // transferWarehouseReview: '/reviewInternalWarehouseTransfer',
+            supplierManagement: '/suppliers-management',
+            // customerManagement: '/customers',
+            productManagement: '/product-management',
+            categoriesManagement: '/categories-management',
+            // reports: '/reports',
             profile: '/profile',
             settings: '/settings',
           };
@@ -127,26 +122,19 @@ const ManagerMainLayout = () => {
 
         <main className="flex-1 p-6">
           <Routes>
-            {/* <Route index element={<Navigate to="dashboard" replace />} />
+            <Route index element={<Navigate to="dashboard" replace />} />
 
             <Route path="dashboard" element={<ManagerDashboard />} />
-            <Route path="inventoryOverview" element={<ManagerInventory />} />
-            <Route path="reviewImportRequests" element={<ReviewImportTransaction />} />
-            <Route path="reviewExportRequests" element={<ReviewExportTransaction />} />
-            <Route path="manageExpiredProducts" element={<ExpiredProductsList />} />
-            <Route path="reviewInternalZoneTransfer" element={<InternalZoneTransfer />} />
-            <Route path="reviewInternalWarehouseTransfer" element={<InternalWarehouseTransfer />} />
-            <Route path="zoneList" element={<ZoneList />} />
-            <Route path="suppliers" element={<SupplierList />} />
-            <Route path="customers" element={<CustomerList />} />
-            <Route path="products" element={<ProductList />} />
-            <Route path="categories" element={<CategoryList />} />
-            <Route path="reports" element={<ManagerReports />} /> */}
-
+            <Route path="zone-management" element={<ZoneManagement/>}/>
+            <Route path="suppliers-management" element={<SupplierManagement/>}/>
+            <Route path="categories-management" element={<CategoryManagement/>}/>
+            <Route path="product-management" element={<ProductManagement/>}/>
+            <Route path="incoming-shipment" element={<IncomingShipmentsApproval/>}/>
+            <Route path="import-export" element={<ImportExportHistory/>}/>
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
 
-            {/* <Route path="*" element={<Navigate to="dashboard" replace />} /> */}
+            <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
         </main>
       </div>
