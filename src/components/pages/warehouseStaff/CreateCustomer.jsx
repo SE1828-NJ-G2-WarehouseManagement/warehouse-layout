@@ -16,7 +16,8 @@ const CreateCustomer = ({ onClose, onSubmit }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center p-4 z-50">
+       <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-800/40 backdrop-blur-sm p-4">
+
             <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
                 <button
                     onClick={onClose}

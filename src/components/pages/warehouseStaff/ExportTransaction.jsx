@@ -239,7 +239,6 @@ const ExportTransaction = () => {
 
   const handleCancelConfirmation = () => {
     setIsConfirming(false);
-    showNotification('info', 'Cancelled', 'Export transaction has been cancelled.');
   };
 
   return (
@@ -410,7 +409,8 @@ const ExportTransaction = () => {
       </form>
 
       {isConfirming && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-800/40 backdrop-blur-sm p-4">
+
           <div className="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full text-center">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center justify-center">
               <ClipboardPenLine className="mr-2 text-blue-500" size={24} />

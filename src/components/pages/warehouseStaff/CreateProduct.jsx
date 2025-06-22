@@ -95,7 +95,8 @@ const CreateProduct = ({ onClose, onSubmit, existingProductNames }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center p-4 z-50">
+       <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-800/40 backdrop-blur-sm p-4">
+
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center p-5 border-b border-gray-200">
                     <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3">

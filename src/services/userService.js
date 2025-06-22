@@ -1,26 +1,61 @@
 import axiosInstance from "../config/axios";
+import { message } from 'antd'; // Make sure Ant Design message is imported
 
 class UserService {
   constructor() {
     this.url = "/users";
   }
 
-  // @route   POST /api/v1/users/reset-password
-  // @desc    reset password
   resetPassword = async (email) => {
-    const response = await axiosInstance.post(`${this.url}/reset-password`, {
-      email,
-    });
-    const data = response.data;
+    try {
+      const response = await axiosInstance.post(`${this.url}/reset-password`, {
+        email,
+      });
+      const data = response.data;
 
-    if (data && !data.isSuccess) {
-      throw new Error("Reset password failed");
+      if (data && !data.isSuccess) {
+        throw new Error(data.message || "Reset password failed");
+      }
+      return data;
+    } catch (error) {
+        console.error("Error in UserService.resetPassword:", error);
+        let errorMessage = "An unknown error occurred during password reset.";
+        if (error.response && error.response.data && error.response.data.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        message.error(errorMessage);
+        throw error;
     }
-
-    return data;
   };
-  // @route   POST /api/v1/users/verify-otp
-  // @desc    verify otp  
+
+  changePasswordSetting = async (currentPassword, newPassword, email) => {
+    try {
+      const response = await axiosInstance.post(`${this.url}/change-password-setting`, {
+        currentPassword, 
+        newPassword,
+        email,
+      });
+      const data = response.data;
+
+      if (data && !data.isSuccess) {
+        throw new Error(data.message || "Change password failed");
+      }
+      return data;
+    } catch (error) {
+        console.error("Error in UserService.changePassword:", error);
+        let errorMessage = "An unknown error occurred during password change.";
+        if (error.response && error.response.data && error.response.data.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        message.error(errorMessage);
+        throw error;
+    }
+  };
+
   verifyOtp = async (otp, email) => {
     const response = await axiosInstance.post(`${this.url}/verify-otp`, {
       otp,
@@ -34,8 +69,7 @@ class UserService {
 
     return data;
   };
-  // @route   POST /api/v1/users/change-password
-  // @desc    change password
+
   changePassword = async (newPassword, email) => {
     const response = await axiosInstance.post(`${this.url}/change-password`, {
       newPassword,
@@ -49,8 +83,7 @@ class UserService {
 
     return data;
   };
-  // @route   GET /api/v1/users/view-profile
-  // @desc    view profile
+
   viewProfile = async () => {
     const response = await axiosInstance.get(`${this.url}/view-profile`, {
       requiresAuth: true
@@ -63,8 +96,7 @@ class UserService {
 
     return data;
   };
-  // @route   GET /api/v1/users/get-manager-available
-  // @desc    list manager available
+
   getManagerAvailable = async () => {
     const response = await axiosInstance.get(`${this.url}/get-manager-available`, {
       requiresAuth: true
@@ -78,8 +110,6 @@ class UserService {
     return data;
   };
 
-  // @route   GET /api/v1/users/get-staff-available
-  // @desc    list staff available
   getStaffAvailable = async () => {
     const response = await axiosInstance.get(`${this.url}/get-staff-available`, {
       requiresAuth: true
@@ -93,26 +123,36 @@ class UserService {
     return data;
   };
 
-  // @route   POST /api/v1/users/update-profile
-  // @desc    update profile
   updateProfile = async (data) => {
-    const response = await axiosInstance.put(`${this.url}/update-profile`, data, {
-      headers: {
-    'Content-Type': 'multipart/form-data'
-  },
-      requiresAuth: true,
-    });
-    const result = response.data;
+    try {
+        const response = await axiosInstance.put(`${this.url}/update-profile`, data, {
+            requiresAuth: true,
+        });
+        const result = response.data;
 
-    if (result && !result.isSuccess) {
-      throw new Error("Update profile failed");
+        if (result && !result.isSuccess) {
+            throw new Error(result.message || "Update profile failed");
+        }
+        return result;
+    } catch (error) {
+        console.error("Error in UserService.updateProfile:", error);
+        let errorMessage = "An unknown error occurred.";
+        if (error.response && error.response.data) {
+            errorMessage = error.response.data.message || errorMessage;
+            if (error.response.data.errors && Array.isArray(error.response.data.errors)) {
+                const zodErrors = error.response.data.errors.map(err => `${err.path}: ${err.message}`).join(', ');
+                errorMessage += ` Details: ${zodErrors}`;
+            } else if (error.response.data.error) {
+                errorMessage = error.response.data.error;
+            }
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        message.error(errorMessage);
+        throw error;
     }
-
-    return result;
   };
 
-  // @route   POST /api/v1/users/login
-  // @desc    login
   login = async (email, password) => {
     const response = await axiosInstance.post(`${this.url}/login`, {
       email,
@@ -127,8 +167,6 @@ class UserService {
     return data;
   };
 
-  // @route   POST /api/v1/users/register
-  // @desc    register
   register = async (email, password, role) => {
     const response = await axiosInstance.post(`${this.url}/register`, {
       email,
@@ -144,8 +182,6 @@ class UserService {
     return data;
   };
 
-  // @route   GET /api/v1/users/
-  // @desc    get list users
   getUsers = async () => {
     const response = await axiosInstance.get(`${this.url}/`, {
       requiresAuth: true

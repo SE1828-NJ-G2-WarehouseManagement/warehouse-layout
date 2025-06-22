@@ -20,7 +20,7 @@ import ProductList from './pages/warehouseStaff/ProductList';
 
 import { useAuth } from '../hooks/useAuth';
 import Profile from './common/Profile';
-import { Settings } from 'lucide-react';
+import Settings from './common/Settings';
 
 const StaffMainLayout = () => {
   const navigate = useNavigate();
