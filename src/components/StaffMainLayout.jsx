@@ -58,11 +58,12 @@ const StaffMainLayout = () => {
             matchedKey = pathToKey[path];
             break;
         } else if (path.includes(':') && pathname.startsWith(path.substring(0, path.indexOf(':')))) {
+            // eslint-disable-next-line no-unused-vars
             matchedKey = pathToKey[path];
             break;
         }
     }
-    setSelectedKey(matchedKey);
+    // setSelectedKey(matchedKey);
 
   }, [location.pathname]);
 

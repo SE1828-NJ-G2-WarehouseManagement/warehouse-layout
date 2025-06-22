@@ -30,18 +30,18 @@ export const getMenuItems = (role) => {
   if (role === 'WAREHOUSE_MANAGER') {
     return [
       ...commonItems,
-      { key: 'zones', icon: Database, label: 'Zone Management', path: '/zoneList' },
-      { key: 'inventory', icon: Package, label: 'Inventory Overview', path: '/inventoryOverview' },
-      { key: 'importReview', icon: ShoppingCart, label: 'Review Import Requests', path: '/reviewImportRequests' },
-      { key: 'exportReview', icon: FileText, label: 'Review Export Requests', path: '/reviewExportRequests' },
-      { key: 'expiredProducts', icon: AlertTriangle, label: 'Manage Expired Products', path: '/manageExpiredProducts' },
-      { key: 'transferZoneReview', icon: ArrowRightLeft, label: 'Review Zone Transfers', path: '/reviewInternalZoneTransfer' },
-      { key: 'transferWarehouseReview', icon: ArrowRightLeft, label: 'Review Warehouse Transfers', path: '/reviewInternalWarehouseTransfer' },
-      { key: 'supplierManagement', icon: Factory, label: 'Supplier Management', path: '/suppliers' },
-      { key: 'customerManagement', icon: Users, label: 'Customer Management', path: '/customers' },
-      { key: 'productManagement', icon: Package, label: 'Product Management', path: '/products' },
-      { key: 'categoryManagement', icon: Tags, label: 'Category Management', path: '/categories' },
-      { key: 'reports', icon: BarChart3, label: 'Reports & Analytics', path: '/reports' },
+      { key: 'zones', icon: Database, label: 'Zone Management', path: '/zone-management' },
+      // { key: 'importReview', icon: ShoppingCart, label: 'Review Import Requests', path: '/reviewImportRequests' },
+      // { key: 'exportReview', icon: FileText, label: 'Review Export Requests', path: '/reviewExportRequests' },
+      // { key: 'transferZoneReview', icon: ArrowRightLeft, label: 'Review Zone Transfers', path: '/reviewInternalZoneTransfer' },
+      // { key: 'transferWarehouseReview', icon: ArrowRightLeft, label: 'Review Warehouse Transfers', path: '/reviewInternalWarehouseTransfer' },
+      { key: 'supplierManagement', icon: Factory, label: 'Supplier Management', path: '/suppliers-management' },
+      // { key: 'customerManagement', icon: Users, label: 'Customer Management', path: '/customers' },
+      { key: 'productManagement', icon: Package, label: 'Product Management', path: '/product-management' },
+      { key: 'categoriesManagement', icon: Tags, label: 'Category Management', path: '/categories-management' },
+      // { key: 'reports', icon: BarChart3, label: 'Reports & Analytics', path: '/reports' },
+      { key: 'incomingShipment', icon: AlertTriangle, label: 'Incoming Shipment', path: '/incoming-shipment' },
+      { key: 'importExportHistory', icon: Package, label: 'Import/Export History', path: '/import-export' },
     ];
   }
   // Logic cho vai trò 'Warehouse Staff'
@@ -60,5 +60,5 @@ export const getMenuItems = (role) => {
       { key: 'transferWarehouse', icon: ArrowRightLeft, label: 'Warehouse-to-Warehouse Transfer', path: '/internalWarehouseTransfer' }
     ];
   }
-  return commonItems; // Chỉ hiển thị Dashboard nếu vai trò không khớp
+  return commonItems; 
 };
