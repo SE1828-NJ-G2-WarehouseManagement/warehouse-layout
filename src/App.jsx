@@ -18,7 +18,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginForm />} />
-          <Route path="/" element={<LoginForm />} /> 
+          <Route path="/" element={<LoginForm />} />
           <Route path="/forgot-password" element={<ForgotPasswordForm />} />
           <Route path="/verify-otp" element={<VerifyOtpForm />} />
           <Route path="/set-new-password" element={<SetNewPasswordForm />} />

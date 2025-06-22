@@ -20,9 +20,10 @@ import Header from './common/Header';
 // import InternalWarehouseTransfer from './pages/warehouseStaff/InternalWarehouseTransfer';
 
 import Profile from './common/Profile';
-import { Settings } from 'lucide-react';
+
 
 import { useAuth } from '../hooks/useAuth';
+import Settings from './common/Settings';
 
 const ManagerMainLayout = () => {
   const navigate = useNavigate();

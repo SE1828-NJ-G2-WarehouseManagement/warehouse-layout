@@ -66,7 +66,8 @@ const CreateSupplier = ({ onClose, onSubmit }) => {
 
   return (
     // Adjusted opacity from bg-opacity-40 to bg-opacity-30 for a lighter overlay
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 p-4">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-800/40 backdrop-blur-sm p-4">
+
       <div className="bg-white w-full max-w-md rounded-xl p-6 shadow-xl relative animate-fade-in-down">
         <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center gap-2">
           <PlusCircle className="size-6 text-blue-600" /> Create New Supplier
