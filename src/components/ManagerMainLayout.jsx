@@ -19,11 +19,21 @@ import IncomingShipmentsApproval from './pages/warehouseManager/IncomingShipment
 import ImportExportHistory from './pages/warehouseManager/ImportExportHistory';
 
 
+const formatKeyForDisplay = (key) => {
+  if (!key) return '';
+  return key
+    .replace(/([A-Z])/g, ' $1') 
+    .replace(/^./, (str) => str.toUpperCase()) 
+    .trim(); 
+};
+
+
 const ManagerMainLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-  const [selectedKey, setSelectedKey] = useState('dashboard');
+  const [currentSelectedKey, setCurrentSelectedKey] = useState('dashboard');
+  const [displaySelectedKey, setDisplaySelectedKey] = useState('Dashboard');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notification, setNotification] = useState(null);
   const { user, logout } = useAuth();
@@ -31,17 +41,17 @@ const ManagerMainLayout = () => {
   useEffect(() => {
     const pathToKey = {
       '/dashboard': 'dashboard',
-      '/zoneList': 'zones',
-      '/importExportHistory': 'importExport',
+      '/zone-management': 'zones',
+      '/import-export': 'importExportHistory',
       // '/reviewImportRequests': 'importReview',
       // '/reviewExportRequests': 'exportReview',
-      '/incomingShipment': 'incomingShipment',
+      '/incoming-shipment': 'incomingShipment',
       // '/reviewInternalZoneTransfer': 'transferZoneReview',
-      // '/reviewInternalWarehouseTransfer': 'transferWarehouseReview',
-      '/suppliers': 'supplierManagement',
+      // '/reviewInternalWarehouseTransfer': 'transferWarehouseTransfer',
+      '/suppliers-management': 'supplierManagement', 
       // '/customers': 'customerManagement',
-      '/products': 'productManagement',
-      '/categories': 'categoriesManagement',
+      '/product-management': 'productManagement', 
+      '/categories-management': 'categoriesManagement', 
       // '/reports': 'reports',
       '/profile': 'profile',
       '/settings': 'settings',
@@ -49,18 +59,19 @@ const ManagerMainLayout = () => {
 
     const pathname = location.pathname;
     let matchedKey = 'dashboard';
+
     for (const path in pathToKey) {
       if (pathname === path) {
         matchedKey = pathToKey[path];
         break;
       } else if (path.includes(':') && pathname.startsWith(path.substring(0, path.indexOf(':')))) {
-        // eslint-disable-next-line no-unused-vars
         matchedKey = pathToKey[path];
         break;
       }
     } 
-    // setSelectedKey(matchedKey);
-  }, [location.pathname]);
+    setCurrentSelectedKey(matchedKey);
+    setDisplaySelectedKey(formatKeyForDisplay(matchedKey));
+  }, [location.pathname]); 
 
   const showNotification = (type, message, description) => {
     setNotification({ type, message, description });
@@ -83,9 +94,10 @@ const ManagerMainLayout = () => {
       <Sidebar
         collapsed={collapsed}
         user={user}
-        selectedKey={selectedKey}
+        selectedKey={currentSelectedKey} 
         setSelectedKey={(key) => {
-          setSelectedKey(key);
+          setCurrentSelectedKey(key); 
+          setDisplaySelectedKey(formatKeyForDisplay(key)); 
           const keyToPath = {
             dashboard: '/dashboard',
             zones: '/zone-management',
@@ -113,7 +125,7 @@ const ManagerMainLayout = () => {
         <Header
           collapsed={collapsed}
           setCollapsed={setCollapsed}
-          selectedKey={selectedKey}
+          selectedKey={displaySelectedKey} 
           user={user}
           showUserMenu={showUserMenu}
           setShowUserMenu={setShowUserMenu}
