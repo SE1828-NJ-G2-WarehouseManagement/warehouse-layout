@@ -1,73 +1,162 @@
 import React, { useState } from 'react';
-import { XCircle } from 'lucide-react';
+import { PlusCircle, X, AlertCircle } from 'lucide-react';
+import axiosInstance from '../../../config/axios';
 
 const CreateCustomer = ({ onClose, onSubmit }) => {
     const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [address, setAddress] = useState('');
+    const [errors, setErrors] = useState({});
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!name.trim() || !email.trim()) {
-            alert('Name and Email cannot be empty.'); // Consider using a custom modal instead of alert in a real app
-            return;
-        }
-        onSubmit({ name, email });
-        onClose();
+    const validateForm = () => {
+        const newErrors = {};
+        if (!name.trim()) newErrors.name = 'Customer name cannot be empty.';
+        if (!phone.trim()) newErrors.phone = 'Phone number cannot be empty.';
+        else if (!/^\d{10,11}$/.test(phone.trim())) newErrors.phone = 'Invalid phone number.';
+        if (!address.trim()) newErrors.address = 'Address cannot be empty.';
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
-    return (
-       <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-800/40 backdrop-blur-sm p-4">
+ const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
 
-            <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
-                <button
-                    onClick={onClose}
-                    className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                >
-                    <XCircle className="size-6" />
-                </button>
-                <h2 className="text-2xl font-bold mb-6 text-gray-800">Add New Customer</h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
+    setLoading(true);
+    try {
+        const res = await axiosInstance.post('/customers/new-customer', {
+            name: name.trim(),
+            phone: phone.trim(),
+            address: address.trim(),
+        });
+
+        const created = res.data?.data || res.data;
+
+        if (!created || !created._id) {
+            throw new Error('Invalid response from server');
+        }
+
+        onSubmit(created);
+        onClose();
+    } catch (error) {
+        const message = error?.response?.data?.message || error.message || 'Unknown error';
+
+        const newErrors = {};
+        if (message.toLowerCase().includes('name')) {
+            newErrors.name = 'Customer name already exists.';
+        }
+        if (message.toLowerCase().includes('phone')) {
+            newErrors.phone = 'Customer phone already exists.';
+        }
+        if (!newErrors.name && !newErrors.phone) {
+            newErrors.general = message;
+        }
+
+        setErrors(newErrors);
+    } finally {
+        setLoading(false);
+    }
+};
+
+
+
+    return (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center p-5 border-b border-gray-200">
+                    <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                        <PlusCircle className="size-6 text-blue-600" />
+                        Add New Customer
+                    </h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 transition-colors">
+                        <X className="size-6" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                    {errors.general && (
+                        <p className="text-sm text-red-600 flex items-center">
+                            <AlertCircle className="size-4 mr-1" />
+                            {errors.general}
+                        </p>
+                    )}
+
                     <div>
-                        <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-1">
-                            Customer Name
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
                         <input
                             type="text"
-                            id="customerName"
-                            name="name"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500"
+                            className={`w-full p-3 border rounded-md shadow-sm focus:ring focus:ring-blue-300 ${errors.name ? 'border-red-500' : 'border-gray-300'
+                                }`}
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
+                            onChange={(e) => {
+                                setName(e.target.value);
+                                setErrors((prev) => ({ ...prev, name: '' }));
+                            }}
                         />
+                        {errors.name && (
+                            <p className="text-sm text-red-600 flex items-center mt-1">
+                                <AlertCircle className="size-4 mr-1" />
+                                {errors.name}
+                            </p>
+                        )}
                     </div>
+
                     <div>
-                        <label htmlFor="customerEmail" className="block text-sm font-medium text-gray-700 mb-1">
-                            Email
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                         <input
-                            type="email"
-                            id="customerEmail"
-                            name="email"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
+                            type="text"
+                            className={`w-full p-3 border rounded-md shadow-sm focus:ring focus:ring-blue-300 ${errors.phone ? 'border-red-500' : 'border-gray-300'
+                                }`}
+                            value={phone}
+                            onChange={(e) => {
+                                setPhone(e.target.value);
+                                setErrors((prev) => ({ ...prev, phone: '' }));
+                            }}
                         />
+                        {errors.phone && (
+                            <p className="text-sm text-red-600 flex items-center mt-1">
+                                <AlertCircle className="size-4 mr-1" />
+                                {errors.phone}
+                            </p>
+                        )}
                     </div>
-                    <div className="flex justify-end gap-3 pt-4">
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                        <input
+                            type="text"
+                            className={`w-full p-3 border rounded-md shadow-sm focus:ring focus:ring-blue-300 ${errors.address ? 'border-red-500' : 'border-gray-300'
+                                }`}
+                            value={address}
+                            onChange={(e) => {
+                                setAddress(e.target.value);
+                                setErrors((prev) => ({ ...prev, address: '' }));
+                            }}
+                        />
+                        {errors.address && (
+                            <p className="text-sm text-red-600 flex items-center mt-1">
+                                <AlertCircle className="size-4 mr-1" />
+                                {errors.address}
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-5 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors shadow-sm"
+                            className="px-5 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
-                            className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+                            disabled={loading}
+                            className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
                         >
-                            Create Customer
+                            <PlusCircle className="size-4" />
+                            {loading ? 'Creating...' : 'Create Customer'}
                         </button>
                     </div>
                 </form>

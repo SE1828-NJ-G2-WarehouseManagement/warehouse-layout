@@ -283,7 +283,7 @@ const ImportTransaction = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Density</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Weight</label>
                 <input
                   type="text"
                   value={product.density ? product.density.toFixed(2) + ' kg' : 'N/A'}
