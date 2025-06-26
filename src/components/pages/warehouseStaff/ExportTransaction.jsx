@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, CheckCircle, XCircle, Ban, ArrowRight, ClipboardPenLine, PlusCircle, Trash2, Package } from 'lucide-react';
+import { Truck, CheckCircle, XCircle, Ban, ArrowRight, ClipboardPenLine, PlusCircle, Trash2, Package, Info } from 'lucide-react'; // Added Info icon
+import axiosInstance from '../../../config/axios'; // Import axiosInstance
 
 // A simple mock Notification component
 const Notification = ({ notification }) => {
@@ -16,7 +17,7 @@ const Notification = ({ notification }) => {
     <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg ${bgColor} ${textColor} border ${borderColor} flex items-center z-50 animate-fade-in-up`}>
       {type === 'success' && <CheckCircle className={`w-6 h-6 mr-3 ${iconColor}`} />}
       {type === 'error' && <XCircle className={`w-6 h-6 mr-3 ${iconColor}`} />}
-      {type === 'info' && <Info className={`w-6 h-6 mr-3 ${iconColor}`} />}
+      {type === 'info' && <Info className={`w-6 h-6 mr-3 ${iconColor}`} />} {/* Info icon added here */}
       <div>
         <p className="font-semibold">{message}</p>
         {description && <p className="text-sm">{description}</p>}
@@ -26,6 +27,7 @@ const Notification = ({ notification }) => {
 };
 
 const ExportTransaction = () => {
+  // Mock product data (consider fetching this from an API too in a real app)
   const initialProductsInStock = [
     { id: 'PROD001', name: 'Dell XPS 15 Laptop', availableStock: 50 },
     { id: 'PROD002', name: 'LG UltraWide Monitor', availableStock: 30 },
@@ -37,12 +39,8 @@ const ExportTransaction = () => {
     { id: 'PROD008', name: 'Logitech C920 Webcam', availableStock: 90 },
   ];
 
-  const initialCustomers = [
-    { id: 'CUST001', name: 'Nguyen Van A', address: '123 ABC Street, District 1, HCMC' },
-    { id: 'CUST002', name: 'Tran Thi B', address: '456 XYZ Street, Ba Dinh District, Hanoi' },
-    { id: 'CUST003', name: 'Le Van C', address: '789 KLM Street, Hai Chau District, Da Nang' },
-    { id: 'CUST004', name: 'Pham Thi D', address: '101 PQR Street, Ninh Kieu District, Can Tho' },
-  ];
+  // State for customers, will be populated from API
+  const [customers, setCustomers] = useState([]);
 
   const getTodayDate = () => {
     const today = new Date();
@@ -76,6 +74,30 @@ const ExportTransaction = () => {
   const [notification, setNotification] = useState(null);
   const [isConfirming, setIsConfirming] = useState(false);
 
+  // Fetch customers data on component mount
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        // Changed to /customers/all to try and fetch all customers
+        const response = await axiosInstance.get('/customers/all');
+        // Assuming the customer data is in response.data.data, adjust if different
+        setCustomers(response.data.data || []);
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+        showNotification('error', 'Error', 'Failed to load customer data.');
+      }
+    };
+    fetchCustomers();
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Update selectedCustomer when generalFormData.customerId changes
+  useEffect(() => {
+    // Find customer using `_id` from API data
+    const customer = customers.find(c => c._id === generalFormData.customerId);
+    setSelectedCustomer(customer);
+  }, [generalFormData.customerId, customers]);
+
+
   const showNotification = (type, message, description) => {
     setNotification({ type, message, description });
     setTimeout(() => setNotification(null), 3000); // Notification disappears after 3 seconds
@@ -86,11 +108,6 @@ const ExportTransaction = () => {
     setGeneralFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' })); // Clear error when input changes
-    }
-
-    if (name === 'customerId') {
-      const customer = initialCustomers.find(c => c.id === value);
-      setSelectedCustomer(customer);
     }
   };
 
@@ -189,7 +206,6 @@ const ExportTransaction = () => {
 
   const validateForm = () => {
     let newErrors = {};
-    // const today = new Date(getTodayDate()); // Not directly used in validation logic for date value, only for initialization
 
     if (!generalFormData.customerId) newErrors.customerId = 'Please select a customer.';
 
@@ -211,6 +227,21 @@ const ExportTransaction = () => {
 
   const handleConfirmExport = () => {
     setIsConfirming(false); // Hide confirmation modal
+
+    // Simulate API call for export (replace with actual axios.post in real app)
+    // In a real application, you would send this data to your backend:
+    // try {
+    //   await axiosInstance.post('/exports', {
+    //     exportDate: generalFormData.exportDate,
+    //     customerId: generalFormData.customerId,
+    //     items: exportItems.map(item => ({ productId: item.productId, quantity: item.quantity }))
+    //   });
+    //   showNotification('success', 'Export Successful', 'Export slip recorded successfully.');
+    //   // Then update stock and reset form
+    // } catch (error) {
+    //   console.error('Export failed:', error);
+    //   showNotification('error', 'Export Failed', error.response?.data?.message || 'Something went wrong.');
+    // }
 
     // Update stock in mock data
     const updatedProductsInStock = productsInStock.map(p => {
@@ -278,13 +309,18 @@ const ExportTransaction = () => {
               }`}
             >
               <option value="">-- Select customer --</option>
-              {initialCustomers.map(customer => (
-                <option key={customer.id} value={customer.id}>
+              {customers.map(customer => ( // Using 'customers' state from API
+                <option key={customer._id} value={customer._id}> {/* Assuming customer._id from API */}
                   {customer.name}
                 </option>
               ))}
             </select>
             {errors.customerId && <p className="mt-1 text-sm text-red-600">{errors.customerId}</p>}
+            {selectedCustomer && (
+                <div className="mt-2 text-sm text-gray-600">
+                    Address: {selectedCustomer.address}
+                </div>
+            )}
           </div>
         </div>
 
@@ -421,7 +457,7 @@ const ExportTransaction = () => {
             </p>
             {selectedCustomer && (
               <p className="text-gray-700 mb-6">
-                **Customer:** {selectedCustomer.name}
+                **Customer:** {selectedCustomer.name} - {selectedCustomer.address}
               </p>
             )}
 
