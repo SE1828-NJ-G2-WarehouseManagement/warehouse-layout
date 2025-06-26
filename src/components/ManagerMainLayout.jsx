@@ -12,19 +12,20 @@ import Profile from './common/Profile';
 
 import { useAuth } from '../hooks/useAuth';
 import Settings from './common/Settings';
-import SupplierManagement from './pages/warehouseManager/SupplierManagement';
-import CategoryManagement from './pages/warehouseManager/CategoryManagement';
+import SupplierManagement from './pages/warehouseManager/Supplier/SupplierManagement';
+import CategoryManagement from './pages/warehouseManager/Category/CategoryManagement';
 import ProductManagement from './pages/warehouseManager/ProductManagement';
 import IncomingShipmentsApproval from './pages/warehouseManager/IncomingShipmentsApproval';
 import ImportExportHistory from './pages/warehouseManager/ImportExportHistory';
+import { ZoneProvider } from '../context/ZoneContext';
 
 
 const formatKeyForDisplay = (key) => {
   if (!key) return '';
   return key
-    .replace(/([A-Z])/g, ' $1') 
-    .replace(/^./, (str) => str.toUpperCase()) 
-    .trim(); 
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (str) => str.toUpperCase())
+    .trim();
 };
 
 
@@ -43,16 +44,10 @@ const ManagerMainLayout = () => {
       '/dashboard': 'dashboard',
       '/zone-management': 'zones',
       '/import-export': 'importExportHistory',
-      // '/reviewImportRequests': 'importReview',
-      // '/reviewExportRequests': 'exportReview',
       '/incoming-shipment': 'incomingShipment',
-      // '/reviewInternalZoneTransfer': 'transferZoneReview',
-      // '/reviewInternalWarehouseTransfer': 'transferWarehouseTransfer',
-      '/suppliers-management': 'supplierManagement', 
-      // '/customers': 'customerManagement',
-      '/product-management': 'productManagement', 
-      '/categories-management': 'categoriesManagement', 
-      // '/reports': 'reports',
+      '/suppliers-management': 'supplierManagement',
+      '/product-management': 'productManagement',
+      '/categories-management': 'categoriesManagement',
       '/profile': 'profile',
       '/settings': 'settings',
     };
@@ -68,19 +63,18 @@ const ManagerMainLayout = () => {
         matchedKey = pathToKey[path];
         break;
       }
-    } 
+    }
     setCurrentSelectedKey(matchedKey);
     setDisplaySelectedKey(formatKeyForDisplay(matchedKey));
-  }, [location.pathname]); 
+  }, [location.pathname]);
 
   const showNotification = (type, message, description) => {
     setNotification({ type, message, description });
-    setTimeout(() => setNotification(null), 3000);
   };
 
   const handleLogout = () => {
     setShowUserMenu(false);
-    showNotification('info', 'Logout successfully', 'See you again!');
+    showNotification('info', 'Logout successful', 'See you again!');
     setTimeout(() => {
       logout();
       navigate('/login');
@@ -89,29 +83,27 @@ const ManagerMainLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Notification notification={notification} />
+      {notification && (
+        <div className="fixed top-4 right-4 z-[1000]">
+          <Notification notification={notification} onClose={() => setNotification(null)} />
+        </div>
+      )}
 
       <Sidebar
         collapsed={collapsed}
         user={user}
-        selectedKey={currentSelectedKey} 
+        selectedKey={currentSelectedKey}
         setSelectedKey={(key) => {
-          setCurrentSelectedKey(key); 
-          setDisplaySelectedKey(formatKeyForDisplay(key)); 
+          setCurrentSelectedKey(key);
+          setDisplaySelectedKey(formatKeyForDisplay(key));
           const keyToPath = {
             dashboard: '/dashboard',
             zones: '/zone-management',
             importExportHistory: '/import-export',
-            // importReview: '/reviewImportRequests',
-            // exportReview: '/reviewExportRequests',
             incomingShipment: '/incoming-shipment',
-            // transferZoneReview: '/reviewInternalZoneTransfer',
-            // transferWarehouseReview: '/reviewInternalWarehouseTransfer',
             supplierManagement: '/suppliers-management',
-            // customerManagement: '/customers',
             productManagement: '/product-management',
             categoriesManagement: '/categories-management',
-            // reports: '/reports',
             profile: '/profile',
             settings: '/settings',
           };
@@ -125,7 +117,7 @@ const ManagerMainLayout = () => {
         <Header
           collapsed={collapsed}
           setCollapsed={setCollapsed}
-          selectedKey={displaySelectedKey} 
+          selectedKey={displaySelectedKey}
           user={user}
           showUserMenu={showUserMenu}
           setShowUserMenu={setShowUserMenu}
@@ -133,21 +125,21 @@ const ManagerMainLayout = () => {
         />
 
         <main className="flex-1 p-6">
-          <Routes>
-            <Route index element={<Navigate to="dashboard" replace />} />
-
-            <Route path="dashboard" element={<ManagerDashboard />} />
-            <Route path="zone-management" element={<ZoneManagement/>}/>
-            <Route path="suppliers-management" element={<SupplierManagement/>}/>
-            <Route path="categories-management" element={<CategoryManagement/>}/>
-            <Route path="product-management" element={<ProductManagement/>}/>
-            <Route path="incoming-shipment" element={<IncomingShipmentsApproval/>}/>
-            <Route path="import-export" element={<ImportExportHistory/>}/>
-            <Route path="profile" element={<Profile />} />
-            <Route path="settings" element={<Settings />} />
-
-            <Route path="*" element={<Navigate to="dashboard" replace />} />
-          </Routes>
+          <ZoneProvider>
+            <Routes>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<ManagerDashboard />} />
+              <Route path="zone-management" element={<ZoneManagement />} />
+              <Route path="suppliers-management" element={<SupplierManagement />} />
+              <Route path="categories-management" element={<CategoryManagement />} />
+              <Route path="product-management" element={<ProductManagement />} />
+              <Route path="incoming-shipment" element={<IncomingShipmentsApproval />} />
+              <Route path="import-export" element={<ImportExportHistory />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="*" element={<Navigate to="dashboard" replace />} />
+            </Routes>
+          </ZoneProvider>
         </main>
       </div>
     </div>
