@@ -90,16 +90,6 @@ const Sidebar = ({ collapsed, user, selectedKey, setSelectedKey }) => {
           );
         })}
       </nav>
-
-      {/* Optional: Footer section for user status/settings etc. */}
-      <div className="p-4 border-t border-gray-200">
-        {!collapsed && (
-          <div className="flex items-center text-gray-600">
-            <Settings size={20} />
-            <span className="ml-3 text-sm">Settings</span>
-          </div>
-        )}
-      </div>
     </div>
   );
 };
