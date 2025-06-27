@@ -1,46 +1,26 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  ArrowLeft, Warehouse, CalendarDays,
-  CalendarCheck,
-  Info, Boxes, Filter, XCircle, Image as ImageIcon,
-  ChevronRight
+  ArrowLeft, Boxes, Filter, XCircle, ChevronRight
 } from 'lucide-react';
+import axiosInstance from '../../../config/axios';
+
+const PAGE_SIZE = 10;
 
 const ZoneProducts = () => {
   const { zoneId } = useParams();
+  const trimmedZoneId = zoneId?.trim();
 
-  const zoneDetails = useMemo(() => [
-    { id: 'zone_a', name: 'Zone A (Electronics)', storageTemperatureMin: 10, storageTemperatureMax: 25, totalCapacity: 1000, currentCapacity: 2 },
-    { id: 'zone_b', name: 'Zone B (Home Appliances)', storageTemperatureMin: 15, storageTemperatureMax: 30, totalCapacity: 800, currentCapacity: 2 },
-    { id: 'zone_c', name: 'Zone C (Food)', storageTemperatureMin: 2, storageTemperatureMax: 8, totalCapacity: 1500, currentCapacity: 2 },
-    { id: 'zone_d', name: 'Zone D (Clothing)', storageTemperatureMin: 18, storageTemperatureMax: 28, totalCapacity: 900, currentCapacity: 2 },
-  ], []);
-
-  const currentZone = useMemo(() => {
-    return zoneDetails.find(z => z.id === zoneId) || {};
-  }, [zoneId, zoneDetails]);
-
-  const allProducts = useMemo(() => [
-    { id: 'PROD001', zoneId: 'zone_a', productName: 'Dell XPS 15 Laptop', quantity: 5, expiryDate: '2025-05-15', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/Surface-Laptop-Go-mau-sac-2.jpg' },
-    { id: 'PROD002', zoneId: 'zone_a', productName: 'LG UltraWide Monitor', quantity: 10, expiryDate: '2025-07-20', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/Surface-Laptop-Go-mau-sac-2.jpg' },
-    { id: 'PROD003', zoneId: 'zone_b', productName: 'Philips Steam Iron', quantity: 20, expiryDate: '2026-01-01', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/Surface-Laptop-Go-mau-sac-2.jpg' },
-    { id: 'PROD004', zoneId: 'zone_c', productName: 'ST25 Rice 5kg', quantity: 15, expiryDate: '2025-06-18', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/Surface-Laptop-Go-mau-sac-2.jpg' },
-    { id: 'PROD005', zoneId: 'zone_a', productName: 'Samsung SSD 1TB', quantity: 8, expiryDate: '2025-08-25', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/Surface-Laptop-Go-mau-sac-2.jpg' },
-    { id: 'PROD006', zoneId: 'zone_d', productName: 'Men\'s Cotton T-shirt', quantity: 12, expiryDate: '2026-03-10', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/Surface-Laptop-Go-mau-sac-2.jpg' },
-    { id: 'PROD007', zoneId: 'zone_b', productName: 'Air Fryer', quantity: 7, expiryDate: '2025-07-05', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/Surface-Laptop-Go-mau-sac-2.jpg' },
-    { id: 'PROD008', zoneId: 'zone_c', productName: 'Vinamilk Fresh Milk', quantity: 3, expiryDate: '2025-06-25', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/Surface-Laptop-Go-mau-sac-2.jpg' },
-    { id: 'PROD009', zoneId: 'zone_a', productName: 'JBL Bluetooth Speaker', quantity: 7, expiryDate: '2025-05-10', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/Surface-Laptop-Go-mau-sac-2.jpg' },
-    { id: 'PROD010', zoneId: 'zone_c', productName: 'Orion Custas Cake', quantity: 25, expiryDate: '2025-04-01', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/Surface-Laptop-Go-mau-sac-2.jpg' },
-  ], []);
-
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-
+  const [zone, setZone] = useState(null);
+  const [items, setItems] = useState([]);
   const [filterDate, setFilterDate] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   const getStatus = (expiryDateString) => {
     const expiry = new Date(expiryDateString);
@@ -48,131 +28,191 @@ const ZoneProducts = () => {
     return expiry < today ? 'expired' : 'good';
   };
 
-  const productsInCurrentZone = useMemo(() => {
-    return allProducts.filter(product => product.zoneId === zoneId);
-  }, [allProducts, zoneId]);
-
-  const goodProductsInZone = useMemo(() => {
-    return productsInCurrentZone.filter(product => getStatus(product.expiryDate) === 'good');
-  }, [productsInCurrentZone, today]);
-
-  const displayedProducts = useMemo(() => {
-    if (!filterDate) return goodProductsInZone;
-    return goodProductsInZone.filter(product => product.expiryDate === filterDate);
-  }, [goodProductsInZone, filterDate]);
-
   const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    if (isNaN(date)) return 'N/A';
     const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
-    return new Date(dateString).toLocaleDateString('en-GB', options);
+    return date.toLocaleDateString('en-GB', options);
   };
 
+  useEffect(() => {
+    const fetchZoneInfo = async () => {
+      try {
+        const res = await axiosInstance.get(`/zones/${trimmedZoneId}`);
+        setZone(res.data);
+      } catch (err) {
+        console.error('Error fetching zone info:', err);
+      }
+    };
+
+    const fetchItems = async () => {
+      try {
+        setLoading(true);
+        const res = await axiosInstance.get(`/zone-items/${trimmedZoneId}/items?page=${page}&pageSize=${PAGE_SIZE}`);
+        setItems(res.data?.data || []);
+        setTotalPages(res.data?.totalPages || 1);
+      } catch (err) {
+        console.error('Error fetching items:', err);
+        setError('Failed to load items.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (trimmedZoneId) {
+      fetchZoneInfo();
+      fetchItems();
+    }
+  }, [trimmedZoneId, page]);
+
+  if (loading) return <div className="p-6 text-blue-600">Loading...</div>;
+  if (error) return <div className="p-6 text-red-600">{error}</div>;
+
+  const goodItems = items.filter(item => getStatus(item.itemId?.expiredDate) === 'good');
+  const displayedItems = filterDate
+    ? goodItems.filter(item => item.itemId?.expiredDate?.slice(0, 10) === filterDate)
+    : goodItems;
+
   return (
-    <div className="bg-white rounded-xl shadow-2xl p-6 md:p-8 lg:p-10 border border-gray-100">
-      <div className="mb-6">
-        <nav className="flex items-center text-gray-500 text-sm mb-4">
-          <Link to="/zoneList" className="hover:text-blue-600 transition-colors">
-            Zone List
-          </Link>
-          <ChevronRight className="size-4 mx-2" />
-          <span className="text-gray-800 font-semibold">{currentZone.name}</span>
-        </nav>
+    <div className="p-6 bg-white rounded-xl shadow-lg">
+      {/* Breadcrumbs */}
+      <nav className="flex items-center text-gray-500 text-sm mb-4">
+        <Link to="/zoneList" className="hover:text-blue-600">Zone List</Link>
+        <ChevronRight className="mx-2 size-4" />
+        <span className="text-gray-800 font-semibold">Zone Products</span>
+      </nav>
 
-        <div className="flex items-center space-x-4 pb-4 border-b border-gray-200">
-          <Link to="/zoneList" className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors">
-            <ArrowLeft className="text-gray-600 size-8" />
-          </Link>
-          <Warehouse className="text-blue-700 size-10 md:size-12" />
-          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900">
-            Valid Products in: <span className="text-green-600">{currentZone.name}</span>
-          </h1>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-gray-700">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="font-semibold">Storage Temperature</p>
-            <p>{currentZone.storageTemperatureMin}°C - {currentZone.storageTemperatureMax}°C</p>
-          </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="font-semibold">Total Capacity</p>
-            <p>{currentZone.totalCapacity} products</p>
-          </div>
-          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-            <p className="font-semibold">Currently Stored</p>
-            <p>{currentZone.currentCapacity} products</p>
-          </div>
-        </div>
+      {/* Header */}
+      <div className="flex items-center space-x-4 mb-6 border-b pb-4">
+        <Link to="/zoneList" className="p-2 -ml-2 rounded-full hover:bg-gray-100">
+          <ArrowLeft className="text-gray-600 size-8" />
+        </Link>
+        <h1 className="text-2xl font-bold text-gray-800">
+          Valid Products in {zone?.name || 'Zone'}
+        </h1>
       </div>
 
-      <div className="bg-gray-50 p-6 rounded-xl shadow-inner flex flex-col md:flex-row items-center justify-between gap-6 mb-8 border border-gray-200 mt-6">
+      {/* Zone Info */}
+      {zone && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-sm text-gray-800">
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl shadow-sm">
+            <p className="text-gray-500 font-medium mb-1">Storage Temperature</p>
+            <p className="text-lg font-semibold text-blue-700">
+              {zone.storageTemperature?.min}°C – {zone.storageTemperature?.max}°C
+            </p>
+          </div>
+
+          <div className="bg-green-50 border border-green-200 p-4 rounded-xl shadow-sm">
+            <p className="text-gray-500 font-medium mb-1">Total Capacity</p>
+            <p className="text-lg font-semibold text-green-700">
+              {zone.totalCapacity} m³
+            </p>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl shadow-sm">
+            <p className="text-gray-500 font-medium mb-1">Current Capacity</p>
+            <p className="text-lg font-semibold text-yellow-700">
+              {zone.currentCapacity?.toFixed(2)} m³
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Summary + Filter */}
+      <div className="bg-gray-50 p-4 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4 mb-6 border">
         <div className="flex items-center gap-3">
           <Boxes className="text-indigo-600 size-6" />
-          <p className="text-lg text-gray-800 font-semibold">
-            Total valid products in this zone: <span className="text-green-600">{goodProductsInZone.length}</span>
+          <p className="text-gray-800 font-semibold">
+            Total products: <span className="text-green-600">{goodItems.length}</span>
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Filter className="text-blue-600 size-6" />
-          <label htmlFor="filterDate" className="text-base font-medium text-gray-700">Filter by expiry date:</label>
+          <Filter className="text-blue-600 size-5" />
+          <label htmlFor="filterDate" className="text-sm text-gray-700">Filter by expiry date:</label>
           <input
             type="date"
             id="filterDate"
             value={filterDate}
             onChange={(e) => setFilterDate(e.target.value)}
-            className="p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out cursor-pointer"
+            className="p-2 border border-gray-300 rounded-lg shadow-sm"
           />
         </div>
       </div>
 
-      {displayedProducts.length === 0 ? (
-        <div className="text-center py-16 bg-green-50 rounded-xl shadow-lg border border-green-300">
-          <XCircle className="mx-auto size-20 text-green-500 mb-6" />
-          <p className="text-gray-700 text-xl font-medium">
-            No valid products found matching your selection in this zone.
-          </p>
+      {/* Table */}
+      {displayedItems.length === 0 ? (
+        <div className="text-center text-gray-500 py-10">
+          <XCircle className="mx-auto text-green-600 size-10 mb-4" />
+          No valid products found.
         </div>
       ) : (
-        <div className="overflow-x-auto bg-white rounded-xl shadow-lg border border-gray-200">
-          <table className="min-w-full table-auto text-sm text-left border-collapse">
-            <thead className="bg-green-600 text-white shadow-md">
-              <tr>
-                <th className="px-4 py-3 border-r border-green-500">No.</th>
-                <th className="px-4 py-3 border-r border-green-500 flex items-center gap-2">
-                  <ImageIcon size={18} /> Image
-                </th>
-                <th className="px-4 py-3 border-r border-green-500">Product Name</th>
-                <th className="px-4 py-3 border-r border-green-500">Product ID</th>
-                <th className="px-4 py-3 border-r border-green-500 text-center">Quantity</th>
-                <th className="px-4 py-3 border-r border-green-500 text-center">Expiry Date</th>
-              
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {displayedProducts.map((product, index) => (
-                <tr key={product.id} className="hover:bg-green-50 transition-colors duration-150 ease-in-out">
-                  <td className="px-4 py-3 border-r border-gray-200">{index + 1}</td>
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <img
-                      src={product.image}
-                      alt={product.productName}
-                      className="w-16 h-16 object-cover rounded-md shadow-sm border border-gray-200"
-                      onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/60/CCCCCC/808080?text=No+Img"; }}
-                    />
-                  </td>
-                  <td className="px-4 py-3 border-r border-gray-200 font-medium text-gray-800">{product.productName}</td>
-                  <td className="px-4 py-3 border-r border-gray-200 text-gray-700">{product.id}</td>
-                  <td className="px-4 py-3 border-r border-gray-200 text-center text-gray-700">{product.quantity}</td>
-                  <td className="px-4 py-3 border-r border-gray-200 text-center font-semibold text-green-600">
-                    <div className="flex items-center justify-center gap-1">
-                      <CalendarDays size={16} /> {formatDate(product.expiryDate)}
-                    </div>
-                  </td>
-                 
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full table-auto text-sm text-left border border-gray-200">
+              <thead className="bg-green-600 text-white">
+                <tr>
+                  <th className="px-4 py-2">No.</th>
+                  <th className="px-4 py-2">Image</th>
+                  <th className="px-4 py-2">Product Name</th>
+                  <th className="px-4 py-2">Quantity</th>
+                  <th className="px-4 py-2">Weight</th>
+                  <th className="px-4 py-2">Expiry Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {displayedItems.map((item, index) => {
+                  const product = item.itemId?.productId;
+                  const image = product?.image || '';
+                  const name = product?.name || 'Unnamed';
+                  const quantity = item.quantity || 0;
+                  const weight = item.itemId?.weights;
+                  const expiryDate = item.itemId?.expiredDate || '';
+
+                  return (
+                    <tr key={item._id} className="border-t">
+                      <td className="px-4 py-2">{index + 1 + (page - 1) * PAGE_SIZE}</td>
+                      <td className="px-4 py-2">
+                        <img
+                          src={image}
+                          alt={name}
+                          className="w-14 h-14 rounded border object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://via.placeholder.com/60?text=No+Image";
+                          }}
+                        />
+                      </td>
+                      <td className="px-4 py-2 font-medium text-gray-800">{name}</td>
+                      <td className="px-4 py-2">{quantity}</td>
+                      <td className="px-4 py-2">{weight ? `${weight} kg` : 'N/A'}</td>
+                      <td className="px-4 py-2">{formatDate(expiryDate)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex justify-center items-center gap-4 mt-6">
+            <button
+              onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+              disabled={page === 1}
+              className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-gray-700 font-medium">Page {page} / {totalPages}</span>
+            <button
+              onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={page === totalPages}
+              className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
