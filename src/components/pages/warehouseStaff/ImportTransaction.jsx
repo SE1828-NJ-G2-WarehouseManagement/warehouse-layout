@@ -37,16 +37,16 @@ const ImportTransaction = () => {
   const zoneDropdownRef = useRef(null);
 
   // States for product search (per row)
-  const [productSearchTerms, setProductSearchTerms] = useState({}); // Stores search term for each product row { index: searchTerm }
-  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState({}); // Stores dropdown open state for each product row { index: boolean }
-  const productDropdownRefs = useRef({}); // Refs for each product dropdown
+  const [productSearchTerms, setProductSearchTerms] = useState({}); 
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState({}); 
+  const productDropdownRefs = useRef({}); 
 
   // Fetch suppliers and products on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [supRes, prodRes] = await Promise.all([
-          axiosInstance.get('/suppliers/all'),
+          axiosInstance.get('/suppliers/all-active'),
           axiosInstance.get('/products/active'),
         ]);
         setSuppliers(supRes.data || []);
