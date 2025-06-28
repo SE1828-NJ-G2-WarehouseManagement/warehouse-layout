@@ -69,16 +69,6 @@ const EditSupplier = ({ onClose, onSubmit, initialData }) => {
           <Edit className="size-6 text-purple-600" /> Edit Supplier
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Displaying the ID of the supplier being edited */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Supplier ID</label>
-            <input
-              type="text"
-              value={formData.id}
-              className="w-full border rounded-lg px-3 py-2 shadow-sm bg-gray-100 cursor-not-allowed text-gray-600"
-              disabled
-            />
-          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
