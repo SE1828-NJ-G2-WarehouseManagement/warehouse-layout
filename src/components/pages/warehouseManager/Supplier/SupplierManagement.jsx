@@ -1,233 +1,281 @@
 import React, { useState, useEffect } from 'react';
 import {
   Table, Card, Button, Form, Input, Space, Typography, Tag,
-  Tooltip, message, Popconfirm, Select
+  Tooltip, message, Select, Pagination
 } from 'antd';
 import {
-  CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, SearchOutlined, AuditOutlined 
+  CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, SearchOutlined, AuditOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
-import SupplierRequestDetailsModal from './SupplierRequestDetailsModal.jsx'; 
-import SupplierRejectionReasonModal from './SupplierRejectionReasonModal.jsx'; 
+import SupplierRequestDetailsModal from './SupplierRequestDetailsModal.jsx';
+import SupplierRejectionReasonModal from './SupplierRejectionReasonModal.jsx';
 
-const { Title, Text } = Typography;
-const { Option } = Select; 
+import { useSupplier } from '../../../../hooks/useSupplier.js';
 
-const initialSupplierRequests = [
-  {
-    id: 'req-001',
-    type: 'Create',
-    submittedBy: 'Warehouse Staff A',
-    dateSubmitted: '2025-06-20',
-    status: 'Pending',
-    supplierDetails: {
-      name: 'New Foods Inc.',
-      contactPerson: 'Alice Smith',
-      email: 'alice@newfoods.com',
-      phone: '123-456-7890',
-      address: '123 Food St, Culinary City',
-      products: ['Organic Vegetables', 'Fresh Fruits']
-    },
-    rejectionReason: '',
-  },
-  {
-    id: 'req-002',
-    type: 'Update',
-    submittedBy: 'Warehouse Staff B',
-    dateSubmitted: '2025-06-19',
-    status: 'Pending',
-    supplierDetails: {
-      old: {
-        name: 'Global Supply Co.',
-        contactPerson: 'Bob Johnson',
-        email: 'bob@globalsupply.com',
-        phone: '987-654-3210',
-        address: '456 Supply Rd, Logistics Town',
-        products: ['Packaging Materials']
-      },
-      new: {
-        name: 'Global Supply Co.',
-        contactPerson: 'Bob Johnson',
-        email: 'bob.j@globalsupply.com',
-        phone: '987-654-3210',
-        address: '456 Supply Rd, Logistics Town, Unit A',
-        products: ['Packaging Materials', 'Cleaning Supplies']
-      }
-    },
-    rejectionReason: '',
-  },
-  {
-    id: 'req-003',
-    type: 'Status Change',
-    submittedBy: 'Warehouse Staff C',
-    dateSubmitted: '2025-06-18',
-    status: 'Pending',
-    supplierDetails: {
-      name: 'Eco-Friendly Packing',
-      oldStatus: 'Active',
-      newStatus: 'Inactive'
-    },
-    rejectionReason: '',
-  },
-  {
-    id: 'req-004',
-    type: 'Create',
-    submittedBy: 'Warehouse Staff A',
-    dateSubmitted: '2025-06-17',
-    status: 'Approved',
-    supplierDetails: {
-      name: 'Local Farm Produce',
-      contactPerson: 'Charlie Brown',
-      email: 'charlie@localfarm.com',
-      phone: '111-222-3333',
-      address: '789 Farm Lane, Green Valley',
-      products: ['Seasonal Fruits']
-    },
-    rejectionReason: '',
-  },
-  {
-    id: 'req-005',
-    type: 'Update',
-    submittedBy: 'Warehouse Staff B',
-    dateSubmitted: '2025-06-16',
-    status: 'Rejected',
-    supplierDetails: {
-      old: { name: 'Tech Gadgets Ltd.' },
-      new: { name: 'Tech Gadgets Ltd.', contactPerson: 'David Lee' }
-    },
-    rejectionReason: 'Contact person update insufficient without full contact details.',
-  },
-];
+const { Title } = Typography;
+const { Option } = Select;
 
 const SupplierManagement = () => {
-  const [requests, setRequests] = useState([]);
-  const [filteredRequests, setFilteredRequests] = useState([]);
+  const {
+    allSuppliers,
+    loading: contextLoading,
+    approveSupplier,
+    rejectSupplier,
+    fetchAllSuppliers,
+    pageIndex,
+    setPageIndex,
+    totalItem
+  } = useSupplier();
+
+  const [filteredSuppliers, setFilteredSuppliers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
   const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
   const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
-  const [currentRequest, setCurrentRequest] = useState(null);
+  const [currentDisplaySupplier, setCurrentDisplaySupplier] = useState(null);
   const [rejectionForm] = Form.useForm();
+  const [actionLoading, setActionLoading] = useState(false);
 
-  // --- Fetch Data (Simulated API Call) ---
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('All');
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState('All');
+
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setRequests(initialSupplierRequests);
-      setLoading(false);
-    }, 500);
-  }, []);
+    applyFiltersAndSort(allSuppliers, searchTerm, selectedStatusFilter, selectedTypeFilter);
+  }, [allSuppliers, searchTerm, selectedStatusFilter, selectedTypeFilter]);
 
-  // --- Filtering Logic ---
   useEffect(() => {
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    const filtered = requests.filter(request =>
-      request.id.toLowerCase().includes(lowerCaseSearchTerm) ||
-      request.type.toLowerCase().includes(lowerCaseSearchTerm) ||
-      request.submittedBy.toLowerCase().includes(lowerCaseSearchTerm) ||
-      request.status.toLowerCase().includes(lowerCaseSearchTerm) ||
-      (request.supplierDetails.name && request.supplierDetails.name.toLowerCase().includes(lowerCaseSearchTerm))
-    );
-    setFilteredRequests(filtered);
-  }, [searchTerm, requests]);
+    fetchAllSuppliers(pageIndex);
+  }, [pageIndex]);
 
-  // --- Modal Handlers ---
-  const showDetailsModal = (request) => {
-    setCurrentRequest(request);
+  const applyFiltersAndSort = (data, term, statusFilter, typeFilter) => {
+    let currentProcessedSuppliers = Array.isArray(data) ? [...data] : [];
+
+    if (term) {
+      const lowerCaseSearchTerm = term.toLowerCase();
+      currentProcessedSuppliers = currentProcessedSuppliers.filter(supplier =>
+        supplier.name.toLowerCase().includes(lowerCaseSearchTerm) ||
+        supplier.status.toLowerCase().includes(lowerCaseSearchTerm) ||
+        (supplier.email && supplier.email.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (supplier.phone && supplier.phone.includes(lowerCaseSearchTerm)) ||
+        (supplier.taxId && supplier.taxId.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (supplier.createdBy?.email && supplier.createdBy.email.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (supplier.createdBy?.firstName && supplier.createdBy.firstName.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (supplier.createdBy?.lastName && supplier.createdBy.lastName.toLowerCase().includes(lowerCaseSearchTerm))
+      );
+    }
+
+    if (statusFilter !== 'All') {
+      currentProcessedSuppliers = currentProcessedSuppliers.filter(supplier =>
+        supplier.status.toUpperCase() === statusFilter.toUpperCase()
+      );
+    }
+
+    if (typeFilter !== 'All') {
+      currentProcessedSuppliers = currentProcessedSuppliers.filter(supplier => {
+        const type = getSupplierRequestType(supplier);
+        return type.toUpperCase() === typeFilter.toUpperCase();
+      });
+    }
+
+    currentProcessedSuppliers.sort((a, b) => {
+      if (a.status === 'PENDING' && b.status !== 'PENDING') return -1;
+      if (a.status !== 'PENDING' && b.status === 'PENDING') return 1;
+      return dayjs(b.updatedAt).diff(dayjs(a.updatedAt));
+    });
+
+    setFilteredSuppliers(currentProcessedSuppliers);
+  };
+
+  const getSupplierRequestType = (supplier) => {
+    if (supplier.requestType) { 
+      return supplier.requestType;
+    }
+
+    const createdAt = dayjs(supplier.createdAt);
+    const updatedAt = dayjs(supplier.updatedAt);
+
+    if (supplier.action && ['INACTIVE', 'ACTIVE'].includes(supplier.action.toUpperCase())) {
+      if (!createdAt.isSame(updatedAt)) {
+        return 'Status Change';
+      }
+    }
+
+    if (createdAt.isSame(updatedAt)) {
+      return 'Create';
+    } else {
+      return 'Update';
+    }
+  };
+
+  const onChangePage = (page) => {
+    setPageIndex(page);
+  };
+
+  const mapApiSupplierToDisplay = (apiSupplier) => {
+    const requestType = getSupplierRequestType(apiSupplier);
+    // Lấy createdBy từ apiSupplier (có sẵn trong response /suppliers/all)
+    const createdBy = apiSupplier.createdBy ?
+      `${apiSupplier.createdBy.firstName || ''} ${apiSupplier.createdBy.lastName || ''}`.trim() || apiSupplier.createdBy.email :
+      'N/A';
+
+    let supplierDetails;
+
+    if (requestType === 'Create') {
+      supplierDetails = {
+        name: apiSupplier.name,
+        contactPerson: apiSupplier.contactPerson || 'N/A',
+        email: apiSupplier.email,
+        phone: apiSupplier.phone,
+        address: apiSupplier.address,
+        products: apiSupplier.products || [],
+        taxId: apiSupplier.taxId,
+        status: apiSupplier.status,
+      };
+    } else if (requestType === 'Update') {
+      supplierDetails = {
+        old: { // Giả định backend có thể gửi các trường này nếu là Update request
+          name: apiSupplier.oldName || 'N/A',
+          contactPerson: apiSupplier.oldContactPerson || 'N/A',
+          email: apiSupplier.oldEmail || 'N/A',
+          phone: apiSupplier.oldPhone || 'N/A',
+          address: apiSupplier.oldAddress || 'N/A',
+          products: apiSupplier.oldProducts || [],
+          taxId: apiSupplier.oldTaxId || 'N/A',
+        },
+        new: {
+          name: apiSupplier.name,
+          contactPerson: apiSupplier.contactPerson || 'N/A',
+          email: apiSupplier.email,
+          phone: apiSupplier.phone,
+          address: apiSupplier.address,
+          products: apiSupplier.products || [],
+          taxId: apiSupplier.taxId,
+        }
+      };
+    } else if (requestType === 'Status Change') {
+      supplierDetails = {
+        name: apiSupplier.name,
+        oldStatus: apiSupplier.previousStatus || 'N/A',
+        newStatus: apiSupplier.action || apiSupplier.status, // Có thể là action hoặc status cuối cùng
+      };
+    } else { // Fallback cho các trường hợp không xác định hoặc 'Create' mặc định
+      supplierDetails = {
+        name: apiSupplier.name,
+        contactPerson: apiSupplier.contactPerson || 'N/A',
+        email: apiSupplier.email,
+        phone: apiSupplier.phone,
+        address: apiSupplier.address,
+        products: apiSupplier.products || [],
+        taxId: apiSupplier.taxId,
+        status: apiSupplier.status,
+      };
+    }
+
+    return {
+      id: apiSupplier._id,
+      type: requestType,
+      submittedBy: createdBy,
+      dateSubmitted: apiSupplier.updatedAt,
+      status: apiSupplier.status,
+      supplierDetails: supplierDetails,
+      rejectionReason: apiSupplier.rejectedNote,
+      createdAt: apiSupplier.createdAt, // Bổ sung để hiển thị trong modal
+      updatedAt: apiSupplier.updatedAt, // Bổ sung để hiển thị trong modal
+    };
+  };
+
+  const showDetailsModal = (supplier) => {
+    const mappedSupplier = mapApiSupplierToDisplay(supplier);
+    setCurrentDisplaySupplier(mappedSupplier);
     setIsDetailsModalVisible(true);
   };
 
   const handleDetailsModalCancel = () => {
     setIsDetailsModalVisible(false);
-    setCurrentRequest(null);
+    setCurrentDisplaySupplier(null);
   };
 
   const showRejectModal = () => {
-    rejectionForm.resetFields(); // Reset form khi mở modal từ chối
+    rejectionForm.resetFields();
     setIsRejectModalVisible(true);
   };
 
   const handleRejectModalCancel = () => {
     setIsRejectModalVisible(false);
-    rejectionForm.resetFields(); // Reset form khi đóng modal từ chối
+    rejectionForm.resetFields();
   };
 
   const handleApproveRequest = async () => {
-    if (!currentRequest) return;
-
-    setLoading(true);
+    if (!currentDisplaySupplier) return;
+    setActionLoading(true);
     try {
-      console.log(`Approving request: ${currentRequest.id}`);
-      setRequests(prev => prev.map(req =>
-        req.id === currentRequest.id ? { ...req, status: 'Approved' } : req
-      ));
-      message.success(`Supplier request ${currentRequest.id} approved successfully!`);
-      handleDetailsModalCancel(); // Đóng modal chi tiết sau khi duyệt
+      await approveSupplier(currentDisplaySupplier.id);
+      message.success(`Supplier request ${currentDisplaySupplier.id} approved successfully!`);
+      handleDetailsModalCancel();
     } catch (error) {
       console.error('Failed to approve request:', error);
       message.error('Failed to approve request. Please try again.');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
   const handleRejectRequest = async (values) => {
-    if (!currentRequest) return;
-
-    setLoading(true);
+    if (!currentDisplaySupplier) return;
+    setActionLoading(true);
     try {
-      console.log(`Rejecting request: ${currentRequest.id} with reason: ${values.reason}`);
-      setRequests(prev => prev.map(req =>
-        req.id === currentRequest.id ? { ...req, status: 'Rejected', rejectionReason: values.reason } : req
-      ));
-      message.success(`Supplier request ${currentRequest.id} rejected.`);
-      handleRejectModalCancel(); // Đóng modal từ chối
-      handleDetailsModalCancel(); // Đóng modal chi tiết sau khi từ chối
+      await rejectSupplier(currentDisplaySupplier.id, values.reason);
+      message.success(`Supplier request ${currentDisplaySupplier.id} rejected.`);
+      handleRejectModalCancel();
+      handleDetailsModalCancel();
     } catch (error) {
       console.error('Failed to reject request:', error);
       message.error('Failed to reject request. Please try again.');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
-  // --- Table Columns ---
   const columns = [
     {
-      title: 'No.', // Serial Number
+      title: 'No.',
       key: 'serialNo',
-      render: (text, record, index) => index + 1,
+      render: (text, record, index) => (pageIndex - 1) * 10 + index + 1,
       width: '5%',
     },
     {
-      title: 'Request ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: '15%',
+      title: 'Supplier Name',
+      dataIndex: 'name',
+      key: 'name',
+      width: '20%',
     },
     {
       title: 'Type',
-      dataIndex: 'type',
-      key: 'type',
+      key: 'typeDisplay',
       width: '10%',
-      render: (type) => {
+      render: (_, record) => {
+        const type = getSupplierRequestType(record);
         let color = 'blue';
-        if (type === 'Update') color = 'orange';
-        if (type === 'Status Change') color = 'purple';
+        if (type === 'UPDATE') color = 'orange';
+        if (type === 'STATUS CHANGE') color = 'purple';
         return <Tag color={color}>{type.toUpperCase()}</Tag>;
       },
     },
     {
       title: 'Submitted By',
-      dataIndex: 'submittedBy',
-      key: 'submittedBy',
-      width: '20%',
+      key: 'createdBy',
+      width: '15%',
+      render: (_, record) => {
+        if (!record.createdBy) return 'N/A';
+        const { firstName, lastName, email } = record.createdBy;
+        const fullName = `${firstName || ''} ${lastName || ''}`.trim();
+        return fullName || email || 'N/A';
+      },
     },
     {
       title: 'Date Submitted',
-      dataIndex: 'dateSubmitted',
-      key: 'dateSubmitted',
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
       render: (date) => dayjs(date).format('DD/MM/YYYY'),
       width: '15%',
     },
@@ -235,22 +283,22 @@ const SupplierManagement = () => {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      width: '15%',
+      width: '10%',
       render: (status) => {
         let color = 'default';
-        if (status === 'Pending') color = 'gold';
-        if (status === 'Approved') color = 'green';
-        if (status === 'Rejected') color = 'red';
+        if (status === 'PENDING') color = 'gold';
+        if (status === 'APPROVED') color = 'green';
+        if (status === 'REJECTED') color = 'red';
         return <Tag color={color}>{status.toUpperCase()}</Tag>;
       },
     },
     {
       title: 'Actions',
       key: 'actions',
-      width: '20%',
+      width: '15%',
       render: (_, record) => (
         <Space size="middle">
-          {record.status === 'Pending' && (
+          {record.status === 'PENDING' && (
             <Tooltip title="Review Request">
               <Button
                 icon={<EyeOutlined />}
@@ -262,7 +310,7 @@ const SupplierManagement = () => {
               </Button>
             </Tooltip>
           )}
-          {record.status !== 'Pending' && (
+          {record.status !== 'PENDING' && (
             <Tooltip title="View Details">
               <Button
                 icon={<EyeOutlined />}
@@ -280,46 +328,76 @@ const SupplierManagement = () => {
 
   return (
     <div className="container mx-auto p-6" style={{ maxWidth: '1200px' }}>
+      <Title level={2} style={{ marginBottom: 30 }}><AuditOutlined /> Supplier Management</Title>
+
       <Card
         className="shadow-xl rounded-lg border border-gray-100 mb-8"
         styles={{ body: { padding: '24px' } }}
       >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          <Input
-            placeholder="Search by Request ID, Type, Submitted By, or Status"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: 400 }}
-            prefix={<SearchOutlined />}
-          />
+          <div className="flex flex-wrap gap-4 items-center">
+            <Input
+              placeholder="Search by Name, Tax ID, Phone, Email, or Created By"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: 350 }}
+              prefix={<SearchOutlined />}
+              className="rounded-md"
+            />
+            <Select
+              defaultValue="All"
+              style={{ width: 150 }}
+              onChange={setSelectedStatusFilter}
+              className="rounded-md"
+              placeholder="Filter by Status"
+              value={selectedStatusFilter}
+            >
+              <Option value="All">All Statuses</Option>
+              <Option value="PENDING">Pending</Option>
+              <Option value="APPROVED">Approved</Option>
+              <Option value="REJECTED">Rejected</Option>
+            </Select>
+            <Select
+              defaultValue="All"
+              style={{ width: 180 }}
+              onChange={setSelectedTypeFilter}
+              className="rounded-md"
+              placeholder="Filter by Type"
+              value={selectedTypeFilter}
+            >
+              <Option value="All">All Types</Option>
+              <Option value="CREATE">Create</Option>
+              <Option value="UPDATE">Update</Option>
+              <Option value="STATUS CHANGE">Status Change</Option>
+            </Select>
+          </div>
 
           <Table
             columns={columns}
-            dataSource={filteredRequests}
-            rowKey="id"
-            loading={loading}
-            pagination={{ pageSize: 10, showSizeChanger: false }}
+            dataSource={filteredSuppliers}
+            rowKey="_id"
+            loading={contextLoading || actionLoading}
+            pagination={false}
             bordered
           />
+          <Pagination current={pageIndex} onChange={onChangePage} pageSize={10} total={totalItem} align="end" />
         </Space>
       </Card>
 
-      {/* Supplier Request Details Modal */}
       <SupplierRequestDetailsModal
         visible={isDetailsModalVisible}
-        currentRequest={currentRequest}
+        currentRequest={currentDisplaySupplier}
         onCancel={handleDetailsModalCancel}
         onApprove={handleApproveRequest}
         onShowRejectModal={showRejectModal}
-        loading={loading}
+        loading={actionLoading}
       />
 
-      {/* Supplier Rejection Reason Modal */}
       <SupplierRejectionReasonModal
         visible={isRejectModalVisible}
         onCancel={handleRejectModalCancel}
         onSubmit={handleRejectRequest}
-        loading={loading}
+        loading={actionLoading}
         form={rejectionForm}
       />
     </div>

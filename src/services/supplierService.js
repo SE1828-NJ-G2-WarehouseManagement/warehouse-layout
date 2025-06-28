@@ -6,10 +6,10 @@ class SupplierService {
         this.url = "/suppliers";
     }
 
-    getSuppliers = async () => {
+    getSuppliersByApprove = async () => {
         try {
             const response = await axiosInstance.get(this.url);
-            return response.data;
+            return response.data.data;
         } catch (error) {
             console.error("Error in SupplierService.getSuppliers:", error);
             message.error("Failed to fetch suppliers.");
@@ -17,10 +17,26 @@ class SupplierService {
         }
     };
 
-    getPendingSuppliers = async () => {
-        try {   
-            const response = await axiosInstance.get(`${this.url}/pending`);
+    getAllSuppliers = async (page = 1, pageSize = 10) => {
+        try {
+            const response = await axiosInstance.get(`${this.url}/all`, {
+                params: { page, pageSize },
+                requiresAuth: true,
+            });
+
             return response.data;
+        } catch (error) {
+            console.error("Error in SupplierService.getAllSuppliers:", error);
+            message.error("Failed to fetch all suppliers.");
+            throw error;
+        }
+    };
+
+
+    getPendingSuppliers = async () => {
+        try {
+            const response = await axiosInstance.get(`${this.url}/pending`);
+            return response.data.data;
         } catch (error) {
             console.error("Error in SupplierService.getPendingSuppliers:", error);
             message.error("Failed to fetch pending suppliers.");
@@ -50,9 +66,9 @@ class SupplierService {
         }
     };
 
-    rejectSupplier = async (id) => {
+    rejectSupplier = async (id, reason) => {
         try {
-            const response = await axiosInstance.put(`${this.url}/reject/${id}`);
+            const response = await axiosInstance.put(`${this.url}/reject/${id}`, { rejectedNote: reason });
             return response.data;
         } catch (error) {
             console.error("Error in SupplierService.rejectSupplier:", error);
@@ -61,4 +77,4 @@ class SupplierService {
         }
     };
 }
-export default SupplierService();
+export default SupplierService;

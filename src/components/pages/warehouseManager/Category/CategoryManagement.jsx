@@ -1,130 +1,96 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Table, Card, Button, Form, Input, Space, Typography, Tag,
-  Tooltip, message, Popconfirm, Descriptions, Divider
+  Table, Card, Button, Input, Space, Typography, Tag,
+  Tooltip, Pagination, Select, Form
 } from 'antd';
 import {
-  CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, SearchOutlined, FolderOpenOutlined, ArrowRightOutlined
+  EyeOutlined, SearchOutlined, FolderOpenOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
-import CategoryRequestDetailsModal from './CategoryRequestDetailsModal.jsx'; 
-import CategoryRejectionReasonModal from './CategoryRejectionReasonModal.jsx'; 
+import { useCategory } from '../../../../hooks/useCategory';
+import CategoryRequestDetailsModal from './CategoryRequestDetailsModal.jsx';
+import CategoryRejectionReasonModal from './CategoryRejectionReasonModal.jsx';
 
-const { Title, Text } = Typography;
-
-// --- Placeholder Data ---
-const initialCategoryRequests = [
-  {
-    id: 'cat-req-001',
-    type: 'Create',
-    submittedBy: 'Warehouse Staff D',
-    dateSubmitted: '2025-06-21',
-    status: 'Pending',
-    categoryDetails: {
-      name: 'New Electronics',
-    },
-    rejectionReason: '',
-  },
-  {
-    id: 'cat-req-002',
-    type: 'Update',
-    submittedBy: 'Warehouse Staff E',
-    dateSubmitted: '2025-06-20',
-    status: 'Pending',
-    categoryDetails: {
-      old: {
-        name: 'Home Appliances',
-      },
-      new: {
-        name: 'Smart Home Appliances',
-      }
-    },
-    rejectionReason: '',
-  },
-  {
-    id: 'cat-req-003',
-    type: 'Status Change',
-    submittedBy: 'Warehouse Staff F',
-    dateSubmitted: '2025-06-19',
-    status: 'Pending',
-    categoryDetails: {
-      name: 'Construction Materials',
-      oldStatus: 'Active',
-      newStatus: 'Inactive'
-    },
-    rejectionReason: '',
-  },
-  {
-    id: 'cat-req-004',
-    type: 'Create',
-    submittedBy: 'Warehouse Staff D',
-    dateSubmitted: '2025-06-18',
-    status: 'Approved',
-    categoryDetails: {
-      name: 'Hand Tools',
-    },
-    rejectionReason: '',
-  },
-  {
-    id: 'cat-req-005',
-    type: 'Update',
-    submittedBy: 'Warehouse Staff E',
-    dateSubmitted: '2025-06-17',
-    status: 'Rejected',
-    categoryDetails: {
-      old: { name: 'Dry Foods' },
-      new: { name: 'Dry Foods' }
-    },
-    rejectionReason: 'Update description too short and does not provide enough detail.',
-  },
-];
+const { Title } = Typography;
+const { Option } = Select;
 
 const CategoryManagement = () => {
-  const [requests, setRequests] = useState([]);
-  const [filteredRequests, setFilteredRequests] = useState([]);
+  const {
+    allCategories,
+    loading,
+    pageIndex,
+    pageSize,
+    totalItem,
+    fetchAllCategories,
+    setPageIndex,
+    setPageSize,
+  } = useCategory();
+
+  const [filteredCategories, setFilteredCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
   const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
   const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
-  const [currentRequest, setCurrentRequest] = useState(null);
+  const [currentRequestForModal, setCurrentRequestForModal] = useState(null); 
   const [rejectionForm] = Form.useForm();
+  // eslint-disable-next-line no-unused-vars
+  const [actionLoading, setActionLoading] = useState(false); 
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('All');
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState('All');
 
-  // --- Fetch Data (Simulated API Call) ---
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setRequests(initialCategoryRequests);
-      setLoading(false);
-    }, 500);
-  }, []);
+    let tempFiltered = [...allCategories];
 
-  // --- Filtering Logic ---
-  useEffect(() => {
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    const filtered = requests.filter(request =>
-      request.id.toLowerCase().includes(lowerCaseSearchTerm) ||
-      request.type.toLowerCase().includes(lowerCaseSearchTerm) ||
-      request.submittedBy.toLowerCase().includes(lowerCaseSearchTerm) ||
-      request.status.toLowerCase().includes(lowerCaseSearchTerm) ||
-      (request.categoryDetails.name && request.categoryDetails.name.toLowerCase().includes(lowerCaseSearchTerm))
-    );
-    setFilteredRequests(filtered);
-  }, [searchTerm, requests]);
+    if (searchTerm) {
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+      tempFiltered = tempFiltered.filter(category =>
+        category._id?.toLowerCase().includes(lowerCaseSearchTerm) ||
+        category.name?.toLowerCase().includes(lowerCaseSearchTerm) ||
+        (category.createdBy?.firstName && category.createdBy.firstName.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (category.createdBy?.lastName && category.createdBy.lastName.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (category.status && category.status.toLowerCase().includes(lowerCaseSearchTerm))
+      );
+    }
 
-  // --- Modal Handlers ---
-  const showDetailsModal = (request) => {
-    setCurrentRequest(request);
+    if (selectedStatusFilter !== 'All') {
+      tempFiltered = tempFiltered.filter(category =>
+        (category.status && category.status.toUpperCase() === selectedStatusFilter.toUpperCase())
+      );
+    }
+
+    if (selectedTypeFilter !== 'All') {
+      tempFiltered = tempFiltered.filter(category =>
+        (category.requestType && category.requestType.toUpperCase() === selectedTypeFilter.toUpperCase())
+      );
+    }
+
+    tempFiltered.sort((a, b) => {
+      const statusOrder = { 'PENDING': 1, 'APPROVED': 2, 'ACTIVE': 2, 'REJECTED': 3, 'INACTIVE': 3 };
+      const statusA = statusOrder[a.status?.toUpperCase()] || 99;
+      const statusB = statusOrder[b.status?.toUpperCase()] || 99;
+
+      if (statusA !== statusB) {
+        return statusA - statusB;
+      }
+      return dayjs(b.createdAt).diff(dayjs(a.createdAt));
+    });
+
+    setFilteredCategories(tempFiltered);
+  }, [allCategories, searchTerm, selectedStatusFilter, selectedTypeFilter]);
+
+  const showDetailsModal = (record) => {
+    setCurrentRequestForModal(record);
     setIsDetailsModalVisible(true);
   };
 
   const handleDetailsModalCancel = () => {
     setIsDetailsModalVisible(false);
-    setCurrentRequest(null);
+    setCurrentRequestForModal(null);
   };
 
-  const showRejectModal = () => {
+  const handleShowRejectModal = (record) => {
     rejectionForm.resetFields();
+    setCurrentRequestForModal(record);
     setIsRejectModalVisible(true);
   };
 
@@ -133,126 +99,96 @@ const CategoryManagement = () => {
     rejectionForm.resetFields();
   };
 
-  const handleApproveRequest = async () => {
-    if (!currentRequest) return;
+  const handleActionSuccess = async () => {
+    await fetchAllCategories(pageIndex, pageSize);
+    handleDetailsModalCancel();
+    handleRejectModalCancel(); 
+  };
 
-    setLoading(true);
-    try {
-      console.log(`Approving request: ${currentRequest.id}`);
-      setRequests(prev => prev.map(req =>
-        req.id === currentRequest.id ? { ...req, status: 'Approved' } : req
-      ));
-      message.success(`Category request ${currentRequest.id} approved successfully!`);
-      handleDetailsModalCancel();
-    } catch (error) {
-      console.error('Failed to approve request:', error);
-      message.error('Failed to approve request. Please try again.');
-    } finally {
-      setLoading(false);
+  const onChangePage = (page, size) => {
+    setPageIndex(page);
+    if (size !== pageSize) {
+      setPageSize(size);
     }
   };
 
-  const handleRejectRequest = async (values) => {
-    if (!currentRequest) return;
-
-    setLoading(true);
-    try {
-      console.log(`Rejecting request: ${currentRequest.id} with reason: ${values.reason}`);
-      setRequests(prev => prev.map(req =>
-        req.id === currentRequest.id ? { ...req, status: 'Rejected', rejectionReason: values.reason } : req
-      ));
-      message.success(`Category request ${currentRequest.id} rejected.`);
-      handleRejectModalCancel();
-      handleDetailsModalCancel();
-    } catch (error) {
-      console.error('Failed to reject request:', error);
-      message.error('Failed to reject request. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- Table Columns ---
   const columns = [
     {
       title: 'No.',
       key: 'serialNo',
-      render: (text, record, index) => index + 1,
+      render: (text, record, index) => (pageIndex - 1) * pageSize + index + 1,
       width: '5%',
     },
     {
-      title: 'Request ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: '15%',
+      title: 'Category Name',
+      dataIndex: 'name',
+      key: 'name',
+      width: '20%',
+      render: (name, record) => {
+        if (record.requestType === 'UPDATE' && record.pendingChanges?.name) {
+          return record.pendingChanges.name;
+        }
+        return name;
+      },
     },
     {
-      title: 'Type',
-      dataIndex: 'type',
-      key: 'type',
+      title: 'Request Type',
+      dataIndex: 'requestType',
+      key: 'requestType',
       width: '10%',
-      render: (type) => {
+      render: (requestType) => {
         let color = 'blue';
-        if (type === 'Update') color = 'orange';
-        if (type === 'Status Change') color = 'purple';
-        return <Tag color={color}>{type.toUpperCase()}</Tag>;
+        if (requestType === 'UPDATE') color = 'orange';
+        if (requestType === 'STATUS_CHANGE') color = 'purple';
+        if (requestType === 'CREATE') color = 'blue';
+        return requestType ? <Tag color={color}>{requestType.toUpperCase()}</Tag> : <Tag>N/A</Tag>;
       },
     },
     {
       title: 'Submitted By',
-      dataIndex: 'submittedBy',
+      dataIndex: 'createdBy',
       key: 'submittedBy',
-      width: '20%',
+      width: '15%',
+      render: (createdBy) => {
+        return createdBy ? `${createdBy.firstName || ''} ${createdBy.lastName || ''}`.trim() : 'N/A';
+      },
     },
     {
       title: 'Date Submitted',
-      dataIndex: 'dateSubmitted',
-      key: 'dateSubmitted',
-      render: (date) => dayjs(date).format('DD/MM/YYYY'),
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : 'N/A', 
       width: '15%',
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      width: '15%',
+      width: '10%',
       render: (status) => {
         let color = 'default';
-        if (status === 'Pending') color = 'gold';
-        if (status === 'Approved') color = 'green';
-        if (status === 'Rejected') color = 'red';
-        return <Tag color={color}>{status.toUpperCase()}</Tag>;
+        if (status === 'PENDING') color = 'gold';
+        if (status === 'APPROVED' || status === 'ACTIVE') color = 'green';
+        if (status === 'REJECTED' || status === 'INACTIVE') color = 'red';
+        return status ? <Tag color={color}>{status.toUpperCase()}</Tag> : <Tag>N/A</Tag>;
       },
     },
     {
       title: 'Actions',
       key: 'actions',
-      width: '20%',
+      width: '10%',
       render: (_, record) => (
         <Space size="middle">
-          {record.status === 'Pending' && (
-            <Tooltip title="Review Request">
-              <Button
-                icon={<EyeOutlined />}
-                onClick={() => showDetailsModal(record)}
-                type="primary"
-                className="rounded-md"
-              >
-                Review
-              </Button>
-            </Tooltip>
-          )}
-          {record.status !== 'Pending' && (
-            <Tooltip title="View Details">
-              <Button
-                icon={<EyeOutlined />}
-                onClick={() => showDetailsModal(record)}
-                className="rounded-md"
-              >
-                View
-              </Button>
-            </Tooltip>
-          )}
+          <Tooltip title={record.status === 'PENDING' ? "Review Request" : "View Details"}>
+            <Button
+              icon={<EyeOutlined />}
+              onClick={() => showDetailsModal(record)}
+              className="rounded-md"
+              type={record.status === 'PENDING' ? 'primary' : 'default'}
+            >
+              {record.status === 'PENDING' ? 'Review' : 'View'}
+            </Button>
+          </Tooltip>
         </Space>
       ),
     },
@@ -266,41 +202,70 @@ const CategoryManagement = () => {
         styles={{ body: { padding: '24px' } }}
       >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          <Input
-            placeholder="Search by Request ID, Type, Submitted By, or Status"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: 400 }}
-            prefix={<SearchOutlined />}
-          />
+          <div className="flex flex-wrap gap-4 items-center">
+            <Input
+              placeholder="Search by Name, Submitted By, or Status"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: 400 }}
+              prefix={<SearchOutlined />}
+              className="rounded-md"
+            />
+            <Select
+              defaultValue="All"
+              style={{ width: 150 }}
+              onChange={setSelectedStatusFilter}
+              className="rounded-md"
+              placeholder="Filter by Status"
+              value={selectedStatusFilter}
+            >
+              <Option value="All">All Statuses</Option>
+              <Option value="PENDING">Pending</Option>
+              <Option value="APPROVED">Approved</Option>
+              <Option value="REJECTED">Rejected</Option>
+            </Select>
+            <Select
+              defaultValue="All"
+              style={{ width: 180 }}
+              onChange={setSelectedTypeFilter}
+              className="rounded-md"
+              placeholder="Filter by Request Type"
+              value={selectedTypeFilter}
+            >
+              <Option value="All">All Types</Option>
+              <Option value="CREATE">Create</Option>
+              <Option value="UPDATE">Update</Option>
+              <Option value="STATUS_CHANGE">Status Change</Option>
+            </Select>
+          </div>
 
           <Table
             columns={columns}
-            dataSource={filteredRequests}
-            rowKey="id"
-            loading={loading}
-            pagination={{ pageSize: 10, showSizeChanger: false }}
+            dataSource={filteredCategories}
+            rowKey="_id"
+            loading={loading || actionLoading}
+            pagination={false}
             bordered
           />
+           <Pagination current={pageIndex} onChange={onChangePage} pageSize={10} total={totalItem} align="end" />
         </Space>
       </Card>
 
-      {/* Request Details Modal */}
       <CategoryRequestDetailsModal
         visible={isDetailsModalVisible}
-        currentRequest={currentRequest}
+        currentRequest={currentRequestForModal}
         onCancel={handleDetailsModalCancel}
-        onApprove={handleApproveRequest}
-        onShowRejectModal={showRejectModal}
-        loading={loading}
+        onApprove={handleActionSuccess}
+        onShowRejectModal={handleShowRejectModal}
+        loading={actionLoading}
       />
 
-      {/* Rejection Reason Modal */}
       <CategoryRejectionReasonModal
         visible={isRejectModalVisible}
+        currentRequest={currentRequestForModal}
         onCancel={handleRejectModalCancel}
-        onSubmit={handleRejectRequest}
-        loading={loading}
+        onSubmit={handleActionSuccess}
+        loading={actionLoading}
         form={rejectionForm}
       />
     </div>

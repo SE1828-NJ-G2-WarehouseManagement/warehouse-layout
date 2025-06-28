@@ -5,26 +5,44 @@ import SupplierService from "../services/supplierService";
 const SupplierContext = createContext();
 
 const SupplierProvider = ({ children }) => {
-    const [suppliers, setSuppliers] = useState([]);
+    const [allSuppliers, setAllSuppliers] = useState([]); 
     const [pendingSuppliers, setPendingSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
-
+    const [pageIndex, setPageIndex] = useState(1);
+    const [totalItem, setTotalItem] = useState(0);
     const supplierService = new SupplierService();
-
+    
     useEffect(() => {
-        fetchSuppliers();
-        fetchPendingSuppliers();
-    }, []);
+        fetchAllSuppliers(pageIndex);
+    }, [pageIndex]);
 
-    const fetchSuppliers = async () => {
+    const fetchSuppliersByApprove = async () => {
         try {
-            const data = await supplierService.getSuppliers();
-            setSuppliers(data);
+            const data = await supplierService.getSuppliersByApprove();
+            setAllSuppliers(data);
         } catch (error) {
             console.error("Error fetching suppliers:", error);
             toast.error("Failed to fetch suppliers.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchAllSuppliers = async (page) => {
+        console.log(`Fetching all suppliers for page ${page} - START`);
+        setLoading(true); 
+        try {
+            const response = await supplierService.getAllSuppliers(page); 
+            setAllSuppliers(response.data);  
+            setTotalItem(response.total || 0); 
+        } catch (error) {
+            console.error("Error fetching all suppliers:", error);
+            toast.error("Failed to fetch all suppliers.");
+            setAllSuppliers([]); 
+            setTotalItem(0); 
+        } finally {
+            setLoading(false);
+            console.log("Fetching all suppliers - END");
         }
     };
 
@@ -38,11 +56,22 @@ const SupplierProvider = ({ children }) => {
         }
     };
 
+    const fetchSupplierById = async (id) => {
+        try {
+            const data = await supplierService.getSupplierById(id);
+            return data;
+        } catch (error) {
+            console.error("Error fetching supplier by ID:", error);
+            toast.error("Failed to fetch supplier details.");
+            throw error;
+        }
+    };
+
     const approveSupplier = async (id) => {
         try {
             const data = await supplierService.approveSupplier(id);
             toast.success("Supplier approved successfully!");
-            fetchPendingSuppliers(); // Refresh pending suppliers
+            await fetchAllSuppliers(); 
             return data;
         } catch (error) {
             console.error("Error approving supplier:", error);
@@ -55,7 +84,7 @@ const SupplierProvider = ({ children }) => {
         try {
             const data = await supplierService.rejectSupplier(id);
             toast.success("Supplier rejected successfully!");
-            fetchPendingSuppliers(); // Refresh pending suppliers
+            await fetchAllSuppliers();
             return data;
         } catch (error) {
             console.error("Error rejecting supplier:", error);
@@ -65,7 +94,7 @@ const SupplierProvider = ({ children }) => {
     };
 
     return (
-        <SupplierContext.Provider value={{ suppliers, pendingSuppliers, loading, fetchSuppliers, fetchPendingSuppliers, approveSupplier, rejectSupplier }}>
+        <SupplierContext.Provider value={{ fetchSupplierById, allSuppliers, pendingSuppliers, loading, fetchSuppliersByApprove, fetchPendingSuppliers, approveSupplier, rejectSupplier, fetchAllSuppliers, pageIndex, setPageIndex, totalItem }}>
             {children}
         </SupplierContext.Provider>
     );

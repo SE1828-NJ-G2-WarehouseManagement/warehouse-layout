@@ -14,10 +14,12 @@ import { useAuth } from '../hooks/useAuth';
 import Settings from './common/Settings';
 import SupplierManagement from './pages/warehouseManager/Supplier/SupplierManagement';
 import CategoryManagement from './pages/warehouseManager/Category/CategoryManagement';
-import ProductManagement from './pages/warehouseManager/ProductManagement';
+import ProductManagement from './pages/warehouseManager/Product/ProductManagement';
 import IncomingShipmentsApproval from './pages/warehouseManager/IncomingShipmentsApproval';
 import ImportExportHistory from './pages/warehouseManager/ImportExportHistory';
 import { ZoneProvider } from '../context/ZoneContext';
+import { SupplierProvider } from '../context/SupplierContext';
+import { CategoryProvider } from '../context/CategoryContext';
 
 
 const formatKeyForDisplay = (key) => {
@@ -125,21 +127,31 @@ const ManagerMainLayout = () => {
         />
 
         <main className="flex-1 p-6">
-          <ZoneProvider>
-            <Routes>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<ManagerDashboard />} />
-              <Route path="zone-management" element={<ZoneManagement />} />
-              <Route path="suppliers-management" element={<SupplierManagement />} />
-              <Route path="categories-management" element={<CategoryManagement />} />
-              <Route path="product-management" element={<ProductManagement />} />
-              <Route path="incoming-shipment" element={<IncomingShipmentsApproval />} />
-              <Route path="import-export" element={<ImportExportHistory />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="*" element={<Navigate to="dashboard" replace />} />
-            </Routes>
-          </ZoneProvider>
+          <Routes>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<ManagerDashboard />} />
+            <Route path="zone-management" element={
+              <ZoneProvider>
+                <ZoneManagement />
+              </ZoneProvider>
+            } />
+            <Route path="suppliers-management" element={
+              <SupplierProvider>
+                <SupplierManagement />
+              </SupplierProvider>
+            } />
+            <Route path="categories-management" element={
+              <CategoryProvider>
+                <CategoryManagement />
+              </CategoryProvider>
+            } />
+            <Route path="product-management" element={<ProductManagement />} />
+            <Route path="incoming-shipment" element={<IncomingShipmentsApproval />} />
+            <Route path="import-export" element={<ImportExportHistory />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="*" element={<Navigate to="dashboard" replace />} />
+          </Routes>
         </main>
       </div>
     </div>
