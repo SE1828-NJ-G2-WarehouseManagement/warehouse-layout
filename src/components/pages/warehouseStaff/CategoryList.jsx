@@ -480,8 +480,6 @@ const CategoryList = () => {
                                 const hasPendingRequest = editRequests.some(req => req.categoryId === c.id && req.status === 'pending_edit') ||
                                                            activityRequests.some(req => req.categoryId === c.id && req.status === 'pending_activity');
 
-                                // Actions (Edit, Toggle Activity) are disabled if category is PENDING OR has any pending requests
-                                // This means APPROVED and REJECTED categories ARE editable/toggleable unless they have a pending request.
                                 const isActionDisabled = c.status === STATUS.PENDING || hasPendingRequest;
 
                                 return (
