@@ -19,6 +19,20 @@ class CategoryService {
         }
     }
 
+    async searchCategoriesByName(name, page = 1, pageSize = 10) {
+        try {
+            const response = await axiosInstance.get(`${this.url}/filter`, {
+                params: { name, page, pageSize }, 
+                requiresAuth: true
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error in CategoryService.searchCategoriesByName:", error);
+            const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred while searching categories. Please check network connectivity and backend server.";
+            throw new Error(errorMessage);
+        }
+    }
+
     async getCategoryById(categoryId) {
         try {
             const response = await axiosInstance.get(`${this.url}/${categoryId}`, {
@@ -33,31 +47,30 @@ class CategoryService {
         }
     }
 
-    async createCategory(categoryData) {
+    async approveCategory(categoryId, userId) {
         try {
-            const response = await axiosInstance.post(`${this.url}`, categoryData, {
+            const response = await axiosInstance.put(`${this.url}/approve/${categoryId}`, { userId }, {
                 requiresAuth: true
             });
             return response.data;
         } catch (error) {
-            console.error("Error in CategoryService.createCategory:", error);
-            const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred while creating category. Please check network connectivity and backend server.";
+            console.error("Error in CategoryService.approveCategory:", error);
+            const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred while approving the category.";
             throw new Error(errorMessage);
         }
     }
 
-    async updateCategory(categoryId, categoryData) {
+    async rejectCategory(categoryId, userId, reason) { 
         try {
-            const response = await axiosInstance.put(`${this.url}/${categoryId}`, categoryData, {
+            const response = await axiosInstance.put(`${this.url}/reject/${categoryId}`, { userId, reason }, { // GỬI reason
                 requiresAuth: true
             });
             return response.data;
         } catch (error) {
-            console.error("Error in CategoryService.updateCategory:", error);
-            const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred while updating category. Please check network connectivity and backend server.";
+            console.error("Error in CategoryService.rejectCategory:", error);
+            const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred while rejecting the category.";
             throw new Error(errorMessage);
         }
     }
-
-    
 }
+export default CategoryService;

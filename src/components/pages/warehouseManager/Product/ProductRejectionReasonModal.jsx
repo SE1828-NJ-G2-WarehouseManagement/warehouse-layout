@@ -1,19 +1,15 @@
 import React from 'react';
-import { Modal, Form, Input, Space, Button, Typography } from 'antd';
+import { Modal, Form, Input, Button, Space, Typography } from 'antd';
 
 const { Title, Text } = Typography;
 
-const CategoryRejectionReasonModal = ({
+const ProductRejectionReasonModal = ({
   visible,
   onCancel,
-  onSubmit, 
-  loading, 
-  form,
+  onSubmit,
+  loading,
+  form
 }) => {
-  const handleFormSubmit = async (values) => {
-    onSubmit(values.reason);
-  };
-
   return (
     <Modal
       title={<Title level={4} className="text-center mb-6">Enter Rejection Reason</Title>}
@@ -29,14 +25,14 @@ const CategoryRejectionReasonModal = ({
         form={form}
         layout="vertical"
         name="rejection_reason_form"
-        onFinish={handleFormSubmit}
+        onFinish={onSubmit}
       >
         <Form.Item
           label={<Text strong>Reason for Rejection</Text>}
           name="reason"
           rules={[
             { required: true, message: 'Please enter a reason for rejection.' },
-            { min: 10, message: 'Reason must be at least 10 characters.' }
+            { min: 10, message: 'Reason must be at least 10 characters.' } // BR86
           ]}
         >
           <Input.TextArea rows={4} placeholder="Enter reason for rejecting this request (min 10 characters)" className="rounded-md" />
@@ -54,4 +50,4 @@ const CategoryRejectionReasonModal = ({
   );
 };
 
-export default CategoryRejectionReasonModal;
+export default ProductRejectionReasonModal;
