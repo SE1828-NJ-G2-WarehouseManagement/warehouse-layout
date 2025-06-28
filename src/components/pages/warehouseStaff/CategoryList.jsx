@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import CreateCategory from './CreateCategory'; 
-import EditCategory from './EditCategory';      
+import CreateCategory from './CreateCategory';
+import EditCategory from './EditCategory';
 
 import {
     ChevronRight,
@@ -12,10 +12,10 @@ import {
     Clock,
     CheckCircle,
     XCircle,
-    Tag, 
+    Tag,
     ToggleLeft,
     ToggleRight,
-    Loader, 
+    Loader,
 } from 'lucide-react';
 import axiosInstance from '../../../config/axios';
 
@@ -97,10 +97,10 @@ const CategoryList = () => {
                 params.status = status.toUpperCase();
             }
             if (activity !== 'all') {
-                params.action = activity.toUpperCase();
+                params.action = activity.toUpperCase(); 
             }
 
-            console.log('[DEBUG] Fetching categories with params:', params); 
+            console.log('[DEBUG] Frontend is sending params to API:', params); // Debug: log params sent to API
 
             const response = await axiosInstance.get('/categories', { params });
 
@@ -108,14 +108,14 @@ const CategoryList = () => {
             let categoriesData = [];
             let total = 0;
             let pages = 0;
-
             if (responseData.data && Array.isArray(responseData.data)) {
                 categoriesData = responseData.data.map(cat => ({
                     id: cat._id,
                     name: cat.name,
-                    status: cat.status,
-                    activityStatus: cat.action, 
+                    status: cat.status, // e.g., 'PENDING', 'APPROVED', 'REJECTED'
+                    activityStatus: cat.action, // e.g., 'ACTIVE', 'INACTIVE'
                     rejectedNote: cat.rejectedNote || null,
+                    requestType: cat.requestType || null, 
                 }));
                 total = responseData.totalCategories || responseData.total || responseData.totalCount || categoriesData.length;
                 pages = responseData.totalPages || responseData.pages || Math.ceil(total / ITEMS_PER_PAGE);
@@ -126,6 +126,7 @@ const CategoryList = () => {
                     status: cat.status,
                     activityStatus: cat.action,
                     rejectedNote: cat.rejectedNote || null,
+                    requestType: cat.requestType || null, // <<< Lấy trường requestType từ API
                 }));
                 total = categoriesData.length;
                 pages = Math.ceil(total / ITEMS_PER_PAGE);
@@ -157,30 +158,40 @@ const CategoryList = () => {
         fetchCategories(currentPage, searchTerm, filterStatus, filterActivity);
     }, [fetchCategories, currentPage, searchTerm, filterStatus, filterActivity, refreshFlag]);
 
+    // Effect to reset current page to 1 when search or filters change
     useEffect(() => {
         if (currentPage !== 1) {
             setCurrentPage(1);
         }
     }, [searchTerm, filterStatus, filterActivity]);
 
+    // Effect to clear notification messages after their display duration
+    useEffect(() => {
+        if (message.text) {
+            const timer = setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+            return () => clearTimeout(timer); // Cleanup timer on unmount or message clear
+        }
+    }, [message]);
+
     // Memoized list of existing category names for validation in Create/Edit forms
     const existingCategoryNames = useMemo(() => {
         return categories.map(c => c.name.trim().toLowerCase());
     }, [categories]);
 
-    // Function to handle changing category activity status (active/inactive)
+    // --- Event Handlers ---
+
+    // Handles changing category activity status (active/inactive)
     const handleChangeActivityStatus = useCallback(async (categoryId, currentActivityStatus, categoryStatus) => {
-        if (categoryStatus !== STATUS.APPROVED) {
-            showNotification('info', `Cannot change activity.`, `Status must be '${STATUS.APPROVED}'.`);
+        if (categoryStatus === STATUS.PENDING) {
+            showNotification('info', `Cannot change activity.`, `Status must not be '${STATUS.PENDING}'.`);
             return;
         }
 
-        // Check if there's any pending request for this category
         const hasPendingRequest = editRequests.some(req => req.categoryId === categoryId && req.status === 'pending_edit') ||
                                  activityRequests.some(req => req.categoryId === categoryId && req.status === 'pending_activity');
 
         if (hasPendingRequest) {
-            showNotification('info', `Cannot change activity status.`, `A pending request already exists.`);
+            showNotification('info', `Cannot change activity status.`, `A pending request already exists for this category.`);
             return;
         }
 
@@ -207,6 +218,7 @@ const CategoryList = () => {
         }
     }, [editRequests, activityRequests, showNotification]);
 
+    // Handles initiating category edit by opening the EditCategory modal
     const handleEditCategory = useCallback((categoryId) => {
         const category = categories.find(c => c.id === categoryId); // Find by 'id'
         if (!category) {
@@ -214,16 +226,18 @@ const CategoryList = () => {
             return;
         }
 
-        if (category.status !== STATUS.APPROVED) {
-            showNotification('info', `Cannot edit category.`, `Category status must be '${STATUS.APPROVED}'.`);
+        // Allow edit only if APPROVED or REJECTED, but not PENDING
+        if (category.status === STATUS.PENDING) {
+            showNotification('info', `Cannot edit category.`, `Category status must not be '${STATUS.PENDING}'.`);
             return;
         }
 
+        // Check for any existing pending requests for this category
         const hasPendingRequest = editRequests.some(req => req.categoryId === categoryId && req.status === 'pending_edit') ||
                                  activityRequests.some(req => req.categoryId === categoryId && req.status === 'pending_activity');
 
         if (hasPendingRequest) {
-            showNotification('info', `Cannot edit category.`, `A pending request already exists.`);
+            showNotification('info', `Cannot edit category.`, `A pending request already exists for this category.`);
             return;
         }
 
@@ -231,17 +245,19 @@ const CategoryList = () => {
         setShowEditForm(true);
     }, [categories, editRequests, activityRequests, showNotification]);
 
+    // Handles opening the CreateCategory modal
     const handleAddCategory = () => setShowCreateForm(true);
 
+    // Handles submission from CreateCategory modal
     const handleCreateCategorySubmit = useCallback(async (newCategoryData) => {
         try {
             setMessage({ type: 'info', text: `Creating category "${newCategoryData.name}"...` });
-            const response = await axiosInstance.post('/categories', { name: newCategoryData.name }); // Assuming only name is sent for create
+            const response = await axiosInstance.post('/categories', { name: newCategoryData.name }); 
             const createdCategory = response.data.data || response.data;
 
             showNotification('success', `Category "${createdCategory.name}" created.`, 'It is awaiting admin approval.');
             setShowCreateForm(false);
-            setRefreshFlag(prev => prev + 1); // Trigger re-fetch for updated list and total count
+            setRefreshFlag(prev => prev + 1);
         } catch (err) {
             console.error("Error creating category:", err.response?.data || err);
             showNotification('error', 'Category creation failed.', err.response?.data?.message || 'Please try again.');
@@ -250,17 +266,27 @@ const CategoryList = () => {
 
     const handleEditRequestSubmit = useCallback(async (updatedData) => {
         const { id, name } = updatedData; 
+        const existingCategory = categories.find(c => c.id === id);
+        if (existingCategory && existingCategory.name === name) {
+            showNotification('info', 'No changes detected.', 'Category name is the same.');
+            setShowEditForm(false);
+            setEditingCategory(null);
+            return;
+        }
+
+        const hasPendingRequest = editRequests.some(req => req.categoryId === id && req.status === 'pending_edit') ||
+                                 activityRequests.some(req => req.categoryId === id && req.status === 'pending_activity');
+
+        if (hasPendingRequest) {
+            showNotification('info', `Cannot submit edit request.`, `A pending request already exists.`);
+            return;
+        }
 
         try {
             setMessage({ type: 'info', text: `Submitting edit request for category "${name}"...` });
             const res = await axiosInstance.put(`/categories/${id}`, { name }); 
 
             if (res.status === 200 || res.status === 201) {
-                setCategories(prevCategories =>
-                    prevCategories.map(c =>
-                        c.id === id ? { ...c, name: name, status: STATUS.PENDING } : c
-                    )
-                );
                 showNotification('success', `Edit request for category submitted.`, `Category "${name}" is awaiting approval.`);
                 setShowEditForm(false);
                 setEditingCategory(null);
@@ -272,7 +298,7 @@ const CategoryList = () => {
             console.error("Failed to update category:", error);
             showNotification('error', `Failed to update category "${name}".`, error.response?.data?.message || error.message || 'Unknown error');
         }
-    }, [showNotification]);
+    }, [editRequests, activityRequests, categories, showNotification]);
     const renderDataWithDiff = (categoryId, fieldName, originalValue) => {
         const request = editRequests.find(req => req.categoryId === categoryId && req.status === 'pending_edit');
         if (request && request.newData[fieldName] !== originalValue) {
@@ -285,7 +311,7 @@ const CategoryList = () => {
         }
         return originalValue;
     };
-
+    
     const renderActivityStatus = (categoryId, currentActivityStatus) => {
         const activityRequest = activityRequests.find(req => req.categoryId === categoryId && req.status === 'pending_activity');
 
@@ -313,6 +339,16 @@ const CategoryList = () => {
             </span>
         );
     };
+    const renderRequestType = (requestTypeFromApi) => {
+        if (requestTypeFromApi) {
+            let displayText = requestTypeFromApi.replace(/_/g, ' ').toLowerCase();
+            displayText = displayText.charAt(0).toUpperCase() + displayText.slice(1); 
+
+            return <span className="text-yellow-700 font-medium text-xs flex items-center"><Clock size={12} className="mr-1" />{displayText}</span>;
+        }
+        return '-'; 
+    };
+
 
     // Handle page change for pagination controls
     const handlePageChange = (newPage) => {
@@ -326,14 +362,14 @@ const CategoryList = () => {
             setSearchTerm(searchInputValue);
         }, 500); // 500ms debounce delay
 
-        return () => clearTimeout(debounceTimer);
+        return () => clearTimeout(debounceTimer); // Clear timeout on component unmount or value change
     }, [searchInputValue]);
 
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <div className="flex items-center text-gray-700 text-lg">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+                <div className="flex items-center text-gray-700 text-lg p-6 bg-white rounded-lg shadow-md">
+                    <Loader className="size-6 animate-spin mx-auto mr-3" />
                     Loading categories...
                 </div>
             </div>
@@ -369,10 +405,15 @@ const CategoryList = () => {
                             </span>
                             Category Management
                         </h1>
-                       
+                        <p className="text-sm text-gray-600 mt-2">
+                            {searchTerm && ` (Search: "${searchTerm}")`}
+                            {filterStatus !== 'all' && ` (Status: ${filterStatus.toLowerCase()})`}
+                            {filterActivity !== 'all' && ` (Activity: ${filterActivity.toLowerCase()})`}
+                        </p>
                     </div>
                 </div>
 
+                {/* --- Notification Message Area --- */}
                 {message.text && (
                     <div className={`flex items-center p-4 rounded-lg border-l-4 ${
                         message.type === 'success' ? 'bg-green-50 text-green-800 border-green-500' :
@@ -427,6 +468,7 @@ const CategoryList = () => {
                                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Name</th>
                                 <th className="px-4 py-3 text-center font-semibold text-gray-600">Status</th>
                                 <th className="px-4 py-3 text-center font-semibold text-gray-600">Activity</th>
+                                <th className="px-4 py-3 text-left font-semibold text-gray-600">Request Type</th> {/* New Column Header */}
                                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Rejected Note</th>
                                 <th className="px-4 py-3 text-center font-semibold text-gray-600 w-32">Actions</th>
                             </tr>
@@ -438,9 +480,9 @@ const CategoryList = () => {
                                 const hasPendingRequest = editRequests.some(req => req.categoryId === c.id && req.status === 'pending_edit') ||
                                                            activityRequests.some(req => req.categoryId === c.id && req.status === 'pending_activity');
 
-                                // Actions are disabled if category is not 'APPROVED' OR has any pending requests
-                             const isActionDisabled = c.status === STATUS.PENDING || hasPendingRequest;
-
+                                // Actions (Edit, Toggle Activity) are disabled if category is PENDING OR has any pending requests
+                                // This means APPROVED and REJECTED categories ARE editable/toggleable unless they have a pending request.
+                                const isActionDisabled = c.status === STATUS.PENDING || hasPendingRequest;
 
                                 return (
                                     <tr key={c.id} className="hover:bg-gray-100 transition-colors">
@@ -458,6 +500,9 @@ const CategoryList = () => {
                                         <td className="px-4 py-3 text-center">
                                             {renderActivityStatus(c.id, c.activityStatus)}
                                         </td>
+                                        <td className="px-4 py-3 text-gray-700"> {/* New Column Data */}
+                                            {renderRequestType(c.requestType)} {/* Render requestType from API */}
+                                        </td>
                                         <td className="px-4 py-3 text-gray-700">
                                             {c.status === STATUS.REJECTED ? c.rejectedNote || 'N/A' : '-'}
                                         </td>
@@ -470,7 +515,7 @@ const CategoryList = () => {
                                                         isActionDisabled ? 'text-gray-400 cursor-not-allowed bg-gray-100' :
                                                         'text-blue-600 hover:bg-blue-100'
                                                     }`}
-                                                    title={isActionDisabled ? "Cannot edit while not approved or pending requests exist" : "Edit category"}
+                                                    title={isActionDisabled ? "Cannot edit while pending or pending requests exist" : "Edit category"}
                                                 >
                                                     <Edit className="size-4" />
                                                 </button>
@@ -481,7 +526,7 @@ const CategoryList = () => {
                                                         isActionDisabled ? 'text-gray-400 cursor-not-allowed bg-gray-100' :
                                                         'text-green-600 hover:bg-green-100'
                                                     }`}
-                                                    title={isActionDisabled ? "Cannot change activity while not approved or pending requests exist" : "Toggle activity status"}
+                                                    title={isActionDisabled ? "Cannot change activity while pending or pending requests exist" : "Toggle activity status"}
                                                 >
                                                     {c.activityStatus === ACTION.ACTIVE ?
                                                         <ToggleRight className="size-4" /> :
@@ -495,8 +540,8 @@ const CategoryList = () => {
                                 );
                             }) : (
                                 <tr>
-                                    {/* colSpan updated from 6 to 5 because delete button column is removed */}
-                                    <td colSpan="5" className="px-4 py-6 text-center text-gray-500">
+                                    {/* colSpan updated from 6 to 7 for the new column */}
+                                    <td colSpan="7" className="px-4 py-6 text-center text-gray-500">
                                         <Info className="size-6 mx-auto mb-2 text-gray-400" />
                                         No categories found matching your criteria.
                                     </td>
@@ -506,7 +551,7 @@ const CategoryList = () => {
                     </table>
                 </div>
 
-                {/* --- Pagination --- */}
+                {/* --- Pagination Controls --- */}
                 {totalPages > 1 && (
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
                         <div className="text-sm text-gray-600">
@@ -516,25 +561,22 @@ const CategoryList = () => {
                             <button
                                 onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                                 disabled={currentPage === 1}
-                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
                             >
                                 Previous
                             </button>
 
-                            {/* Dynamic page numbers */}
+                            {/* Dynamically render page numbers */}
                             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                 let pageNum;
+                                // Logic to display a maximum of 5 page numbers (e.g., 1 2 3 4 5 or ... 3 4 5 6 7 ...)
                                 if (totalPages <= 5) {
-                                    // If 5 or fewer total pages, show all
                                     pageNum = i + 1;
                                 } else if (currentPage <= 3) {
-                                    // If current page is near start, show 1 to 5
                                     pageNum = i + 1;
                                 } else if (currentPage >= totalPages - 2) {
-                                    // If current page is near end, show last 5 pages
                                     pageNum = totalPages - 4 + i;
                                 } else {
-                                    // Otherwise, show current page, 2 before, 2 after
                                     pageNum = currentPage - 2 + i;
                                 }
 
@@ -542,7 +584,8 @@ const CategoryList = () => {
                                     <button
                                         key={pageNum}
                                         onClick={() => handlePageChange(pageNum)}
-                                        className={`px-4 py-2 border border-gray-300 rounded-lg text-sm transition-colors ${pageNum === currentPage ? 'bg-blue-600 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100'}`}
+                                        className={`px-4 py-2 border rounded-lg hover:bg-gray-50 ${pageNum === currentPage ? 'bg-blue-600 text-white border-blue-600' : ''
+                                            }`}
                                     >
                                         {pageNum}
                                     </button>
@@ -552,7 +595,7 @@ const CategoryList = () => {
                             <button
                                 onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                                 disabled={currentPage === totalPages}
-                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
                             >
                                 Next
                             </button>
@@ -565,7 +608,7 @@ const CategoryList = () => {
                     <CreateCategory
                         onClose={() => setShowCreateForm(false)}
                         onSubmit={handleCreateCategorySubmit}
-                        existingCategoryNames={existingCategoryNames}
+                        existingCategoryNames={existingCategoryNames} // Pass existing names for validation
                     />
                 )}
 
@@ -577,8 +620,9 @@ const CategoryList = () => {
                             setEditingCategory(null);
                         }}
                         onSubmit={handleEditRequestSubmit}
+                        // Filter out the current category's name to allow editing without self-collision
                         existingCategoryNames={existingCategoryNames.filter(name =>
-                            name !== editingCategory.name.trim().toLowerCase() // Exclude current category's name for uniqueness check
+                            name !== editingCategory.name.trim().toLowerCase()
                         )}
                     />
                 )}
