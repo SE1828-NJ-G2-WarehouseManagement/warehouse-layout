@@ -18,51 +18,27 @@ const { Option } = Select;
 const CategoryManagement = () => {
   const {
     allCategories,
-    loading,
+    loading, 
     pageIndex,
     pageSize,
     totalItem,
     fetchAllCategories,
     setPageIndex,
     setPageSize,
+    dataParams, setDataParams
   } = useCategory();
 
   const [filteredCategories, setFilteredCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
   const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
-  const [currentRequestForModal, setCurrentRequestForModal] = useState(null); 
+  const [currentRequestForModal, setCurrentRequestForModal] = useState(null);
   const [rejectionForm] = Form.useForm();
-  // eslint-disable-next-line no-unused-vars
-  const [actionLoading, setActionLoading] = useState(false); 
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState('All');
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState('All');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('All Status');
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState('All Types');
 
   useEffect(() => {
     let tempFiltered = [...allCategories];
-
-    if (searchTerm) {
-      const lowerCaseSearchTerm = searchTerm.toLowerCase();
-      tempFiltered = tempFiltered.filter(category =>
-        category._id?.toLowerCase().includes(lowerCaseSearchTerm) ||
-        category.name?.toLowerCase().includes(lowerCaseSearchTerm) ||
-        (category.createdBy?.firstName && category.createdBy.firstName.toLowerCase().includes(lowerCaseSearchTerm)) ||
-        (category.createdBy?.lastName && category.createdBy.lastName.toLowerCase().includes(lowerCaseSearchTerm)) ||
-        (category.status && category.status.toLowerCase().includes(lowerCaseSearchTerm))
-      );
-    }
-
-    if (selectedStatusFilter !== 'All') {
-      tempFiltered = tempFiltered.filter(category =>
-        (category.status && category.status.toUpperCase() === selectedStatusFilter.toUpperCase())
-      );
-    }
-
-    if (selectedTypeFilter !== 'All') {
-      tempFiltered = tempFiltered.filter(category =>
-        (category.requestType && category.requestType.toUpperCase() === selectedTypeFilter.toUpperCase())
-      );
-    }
 
     tempFiltered.sort((a, b) => {
       const statusOrder = { 'PENDING': 1, 'APPROVED': 2, 'ACTIVE': 2, 'REJECTED': 3, 'INACTIVE': 3 };
@@ -85,7 +61,7 @@ const CategoryManagement = () => {
 
   const handleDetailsModalCancel = () => {
     setIsDetailsModalVisible(false);
-    setCurrentRequestForModal(null);
+    setCurrentRequestForModal(null); 
   };
 
   const handleShowRejectModal = (record) => {
@@ -98,15 +74,15 @@ const CategoryManagement = () => {
     setIsRejectModalVisible(false);
     rejectionForm.resetFields();
   };
-
   const handleActionSuccess = async () => {
-    await fetchAllCategories(pageIndex, pageSize);
-    handleDetailsModalCancel();
+    await fetchAllCategories(dataParams); 
+    handleDetailsModalCancel(); 
     handleRejectModalCancel(); 
   };
 
   const onChangePage = (page, size) => {
     setPageIndex(page);
+    setDataParams({ ...dataParams, page })
     if (size !== pageSize) {
       setPageSize(size);
     }
@@ -157,7 +133,7 @@ const CategoryManagement = () => {
       title: 'Date Submitted',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : 'N/A', 
+      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : 'N/A',
       width: '15%',
     },
     {
@@ -204,35 +180,42 @@ const CategoryManagement = () => {
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div className="flex flex-wrap gap-4 items-center">
             <Input
-              placeholder="Search by Name, Submitted By, or Status"
+              placeholder="Search by Name"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setDataParams({ ...dataParams, name: e.target.value })
+              }}
               style={{ width: 400 }}
               prefix={<SearchOutlined />}
               className="rounded-md"
             />
             <Select
-              defaultValue="All"
               style={{ width: 150 }}
-              onChange={setSelectedStatusFilter}
+              onChange={(value) => {
+                setSelectedStatusFilter(value)
+                setDataParams({...dataParams,status:value || ""})
+              }}
               className="rounded-md"
               placeholder="Filter by Status"
               value={selectedStatusFilter}
             >
-              <Option value="All">All Statuses</Option>
+              <Option value="">All Status</Option>
               <Option value="PENDING">Pending</Option>
               <Option value="APPROVED">Approved</Option>
               <Option value="REJECTED">Rejected</Option>
             </Select>
             <Select
-              defaultValue="All"
               style={{ width: 180 }}
-              onChange={setSelectedTypeFilter}
+              onChange={(value) => {
+                setSelectedTypeFilter(value)
+                  setDataParams({...dataParams,type:value || ""})
+              }}
               className="rounded-md"
               placeholder="Filter by Request Type"
               value={selectedTypeFilter}
             >
-              <Option value="All">All Types</Option>
+              <Option value="">All Types</Option>
               <Option value="CREATE">Create</Option>
               <Option value="UPDATE">Update</Option>
               <Option value="STATUS_CHANGE">Status Change</Option>
@@ -243,11 +226,11 @@ const CategoryManagement = () => {
             columns={columns}
             dataSource={filteredCategories}
             rowKey="_id"
-            loading={loading || actionLoading}
+            loading={loading} 
             pagination={false}
             bordered
           />
-           <Pagination current={pageIndex} onChange={onChangePage} pageSize={10} total={totalItem} align="end" />
+          <Pagination current={pageIndex} onChange={onChangePage} pageSize={pageSize} total={totalItem} align="end" />
         </Space>
       </Card>
 
@@ -257,15 +240,13 @@ const CategoryManagement = () => {
         onCancel={handleDetailsModalCancel}
         onApprove={handleActionSuccess}
         onShowRejectModal={handleShowRejectModal}
-        loading={actionLoading}
       />
 
       <CategoryRejectionReasonModal
         visible={isRejectModalVisible}
         currentRequest={currentRequestForModal}
         onCancel={handleRejectModalCancel}
-        onSubmit={handleActionSuccess}
-        loading={actionLoading}
+        onSuccess={handleActionSuccess}
         form={rejectionForm}
       />
     </div>

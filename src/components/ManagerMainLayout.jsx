@@ -5,7 +5,7 @@ import Sidebar from './common/Sidebar';
 import Header from './common/Header';
 
 import ManagerDashboard from './pages/warehouseManager/Dashboard';
-import ZoneManagement from './pages/warehouseManager/ZoneManagement';
+import ZoneManagement from './pages/warehouseManager/Zone/ZoneManagement';
 
 import Profile from './common/Profile';
 

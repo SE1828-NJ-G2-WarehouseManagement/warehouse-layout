@@ -24,10 +24,8 @@ const ZoneProvider = ({ children }) => {
             fetchAllZonesTotalCapacity()
             setZones(response?.data);
             setTotalItem(response?.total)
-            toast.success(response.message || "Zones loaded successfully!");
         } catch (error) {
             toast.error(error.message || "An error occurred while fetching zones.");
-            console.error("Error in ZoneContext.fetchZones:", error);
         } finally {
             setLoading(false);
         }

@@ -8,21 +8,28 @@ const CategoryProvider = ({ children }) => {
     const [allCategories, setAllCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pageIndex, setPageIndex] = useState(1);
-    const [pageSize, setPageSize] = useState(10); 
+    const [pageSize, setPageSize] = useState(10);
     const [totalItem, setTotalItem] = useState(0);
+    const [dataParams, setDataParams] = useState({
+        page: 1,
+        size: 10,
+        type: "",
+        status: "",
+        name: ""
+    });
     const categoryService = new CategoryService();
 
-    useEffect(() => {
-        fetchAllCategories(pageIndex, pageSize);
-    }, [pageIndex, pageSize]);
 
-    const fetchAllCategories = async (page, size) => {
-        console.log(`Fetching all categories for page ${page} with size ${size} - START`);
+    useEffect(() => {
+        fetchAllCategories(dataParams);
+    }, [dataParams]);
+
+    const fetchAllCategories = async (params) => {
         setLoading(true);
         try {
-            const response = await categoryService.getAllCategories(page, size);
-            setAllCategories(response.data);
-            setTotalItem(response.total || 0); 
+            const response = await categoryService.getAllCategories(params);
+            setAllCategories(response?.data);
+            setTotalItem(response?.total || 0);
         } catch (error) {
             console.error("Error fetching all categories:", error);
             toast.error("Failed to fetch all categories.");
@@ -46,7 +53,7 @@ const CategoryProvider = ({ children }) => {
     }
 
     const approvalCategory = async (categoryId, userId) => {
-        try {   
+        try {
             const response = await categoryService.approveCategory(categoryId, userId);
             toast.success("Category approved successfully.");
             return response;
@@ -57,9 +64,9 @@ const CategoryProvider = ({ children }) => {
         }
     }
 
-    const rejectCategory = async (categoryId, userId, reason) => { 
+    const rejectCategory = async (categoryId, userId, note) => {
         try {
-            const response = await categoryService.rejectCategory(categoryId, userId, reason); 
+            const response = await categoryService.rejectCategory(categoryId, userId, note);
             toast.success("Category rejected successfully.");
             return response;
         } catch (error) {
@@ -72,11 +79,10 @@ const CategoryProvider = ({ children }) => {
     const searchCategoriesByTerm = async (searchTerm, page, size) => {
         try {
             if (!searchTerm) {
-                await fetchAllCategories(page, size);
                 return;
             }
             const response = await categoryService.searchCategoriesByName(searchTerm, page, size);
-            setAllCategories(response.data.data); 
+            setAllCategories(response.data.data);
             setTotalItem(response.data.total || 0);
             toast.success("Search categories successfully");
         } catch (error) {
@@ -89,7 +95,7 @@ const CategoryProvider = ({ children }) => {
     }
 
     return (
-        <CategoryContext.Provider value={{ allCategories, loading, pageIndex, pageSize, totalItem, fetchAllCategories, fetchCategoryById, setPageIndex, setPageSize, approvalCategory, rejectCategory, searchCategoriesByTerm }}>
+        <CategoryContext.Provider value={{ allCategories, loading, pageIndex, pageSize, totalItem, fetchAllCategories, fetchCategoryById, setPageIndex, setPageSize, approvalCategory, rejectCategory, searchCategoriesByTerm,dataParams,setDataParams }}>
             {children}
         </CategoryContext.Provider>
     );

@@ -9,7 +9,7 @@ import CenteredSpinner from '../../common/SpinnerLoading';
 import { ROLE } from '../../../constant/key';
 
 const LoginForm = () => {
-  const { login, user, loading } = useAuth();
+  const { login, user, loading,fetchUserProfile } = useAuth();
 
   if (loading) {
     return <CenteredSpinner />;
@@ -27,6 +27,7 @@ const LoginForm = () => {
   const onFinish = async (values) => {
     try {
       const result = await login(values);
+       await fetchUserProfile();
 
       if (result?.success) {
         toast.success("Login successful!");

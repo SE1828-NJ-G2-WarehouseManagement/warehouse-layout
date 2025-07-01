@@ -1,17 +1,44 @@
-import React from 'react';
-import { Modal, Form, Input, Space, Button, Typography } from 'antd';
+import React, { useEffect } from 'react';
+import { Modal, Form, Input, Space, Button, Typography, message } from 'antd';
+import { useCategory } from '../../../../hooks/useCategory';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const { Title, Text } = Typography;
 
 const CategoryRejectionReasonModal = ({
   visible,
   onCancel,
-  onSubmit, 
-  loading, 
-  form,
+  currentRequest,
+  onSuccess,
+  form
 }) => {
+  const { rejectCategory, loading } = useCategory(); // Lấy loading từ useCategory
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (visible) {
+      form.resetFields();
+    }
+  }, [visible, currentRequest, form]);
+
   const handleFormSubmit = async (values) => {
-    onSubmit(values.reason);
+    if (!currentRequest?._id) {
+      message.error("No category request selected for rejection.");
+      return;
+    }
+
+    if (!user?._id) {
+      message.error("User ID not found. Please log in again.");
+      return;
+    }
+
+    try {
+      await rejectCategory(currentRequest._id, user._id, values.reason);
+      onSuccess();
+      onCancel();
+    } catch (error) {
+      message.error("Failed to reject category: " + (error.response?.data?.message || error.message || "Unknown error"));
+    }
   };
 
   return (
@@ -31,6 +58,17 @@ const CategoryRejectionReasonModal = ({
         name="rejection_reason_form"
         onFinish={handleFormSubmit}
       >
+        {currentRequest && (
+          <div className="mb-4 text-center">
+            <Text strong>Rejecting Category:</Text> <Text>{currentRequest?.name || 'N/A'}</Text>
+            {currentRequest?.rejectedNote && (
+              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-md">
+                <Text strong className="text-red-700">Previous Rejection Note:</Text>
+                <Text className="text-red-800 ml-2">{currentRequest?.rejectedNote}</Text>
+              </div>
+            )}
+          </div>
+        )}
         <Form.Item
           label={<Text strong>Reason for Rejection</Text>}
           name="reason"
