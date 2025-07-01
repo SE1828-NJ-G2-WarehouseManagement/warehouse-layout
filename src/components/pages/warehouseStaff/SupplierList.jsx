@@ -28,7 +28,7 @@ const SupplierList = () => {
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterActivity, setFilterActivity] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
-    const [message, setMessage] = useState({ type: '', text: '' }); 
+    const [message, setMessage] = useState({ type: '', text: '' });
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [showEditForm, setShowEditForm] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState(null);
@@ -111,7 +111,7 @@ const SupplierList = () => {
         }
 
         const hasPendingRequest = editRequests.some(req => req.supplierId === supplierId && req.status === 'pending_edit') ||
-                                   activityRequests.some(req => req.supplierId === supplierId && req.status === 'pending_activity');
+            activityRequests.some(req => req.supplierId === supplierId && req.status === 'pending_activity');
 
         if (hasPendingRequest) {
             setMessage({ type: 'info', text: `Cannot change activity status for supplier ${supplierId} when there's a pending request.` });
@@ -123,7 +123,10 @@ const SupplierList = () => {
 
         if (window.confirm(`Are you sure you want to ${actionText} supplier ${supplierId}?`)) {
             try {
-                await axiosInstance.put(`/suppliers/${supplierId}/action`, { action: newActionStatus });
+                await axiosInstance.put(
+                    `/suppliers/request-change-action/${supplierId}`,
+                    { action: newActionStatus }
+                );
 
                 const requestId = `ACTREQ${(activityRequests.length + 1).toString().padStart(3, '0')}`;
                 setActivityRequests(prev => [
@@ -157,7 +160,7 @@ const SupplierList = () => {
         }
 
         const hasPendingRequest = editRequests.some(req => req.supplierId === supplierId && req.status === 'pending_edit') ||
-                                   activityRequests.some(req => req.supplierId === supplierId && req.status === 'pending_activity');
+            activityRequests.some(req => req.supplierId === supplierId && req.status === 'pending_activity');
 
         if (hasPendingRequest) {
             setMessage({ type: 'info', text: `Cannot edit supplier ${supplierId} when there's a pending request.` });
@@ -173,62 +176,22 @@ const SupplierList = () => {
 
     const handleAddSupplier = () => setShowCreateForm(true);
 
-    const handleEditRequestSubmit = useCallback(async (updatedData) => {
-        const existingRequest = editRequests.find(req => req.supplierId === updatedData._id && req.status === 'pending_edit');
-
+    const  handleEditRequestSubmit = async (updatedData) => {
         try {
-            let response;
-            const originalSupplier = suppliers.find(s => s._id === updatedData._id);
-            const payload = {
-                supplierId: updatedData._id,
-                oldData: originalSupplier,
-                newData: updatedData,
-                type: 'edit',
-            };
-
-            if (existingRequest) {
-                response = await axiosInstance.put(`/edit-requests/${existingRequest.id}`, payload);
-            } else {
-                response = await axiosInstance.post('/edit-requests', payload);
-            }
-
-            const responseData = response.data;
-
-            if (existingRequest) {
-                setEditRequests(prev => prev.map(req =>
-                    req.id === existingRequest.id
-                        ? { ...req, newData: updatedData, timestamp: new Date().toISOString() }
-                        : req
-                ));
-                setMessage({ type: 'info', text: `Edit request for supplier ${updatedData._id} updated and awaiting approval.` });
-            } else {
-                setEditRequests(prev => [
-                    ...prev,
-                    {
-                        id: responseData._id || responseData.id,
-                        supplierId: updatedData._id,
-                        oldData: originalSupplier,
-                        newData: updatedData,
-                        status: 'pending_edit',
-                        timestamp: new Date().toISOString()
-                    }
-                ]);
-                setSuppliers(prevSuppliers =>
-                    prevSuppliers.map(s =>
-                        s._id === updatedData._id ? { ...s, status: 'pending' } : s
-                    )
-                );
-                setMessage({ type: 'success', text: `Edit request for supplier ${updatedData._id} submitted for approval.` });
-            }
-            setShowEditForm(false);
-            setEditingSupplier(null);
-        } catch (e) {
-            console.error("Failed to submit edit request:", e);
-            setMessage({ type: 'error', text: `Error submitting edit request: ${e.response?.data?.message || e.message}` });
+            const res = await axiosInstance.put(
+                `/suppliers/${updatedData._id}`,
+                updatedData
+            );
+            console.log("Edit request submitted:", res.data);
+            setMessage({ type: 'success', text: `Edit request submitted and is pending approval.` });
+        } catch (err) {
+            console.error("Failed to submit edit request:", err);
+            setMessage({ type: 'error', text: `Error: ${err.response?.data?.message || err.message}` });
         }
-    }, [editRequests, suppliers]);
+    };
 
-  
+
+
     const handleCreateSupplier = useCallback(async (newSupplier) => {
         try {
             const response = await axiosInstance.post('/suppliers', newSupplier);
@@ -243,10 +206,10 @@ const SupplierList = () => {
                 ...prevSuppliers
             ]);
             setMessage({ type: 'success', text: `Supplier ${createdSupplier._id} created and awaiting approval.` });
-            setShowCreateForm(false); 
+            setShowCreateForm(false);
         } catch (e) {
             console.error("Failed to create supplier:", e);
-            throw e; 
+            throw e;
         }
     }, []);
 
@@ -280,9 +243,8 @@ const SupplierList = () => {
         }
 
         return (
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                currentActivityStatus === 'active' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-            }`}>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${currentActivityStatus === 'active' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                }`}>
                 {currentActivityStatus === 'active' ? 'Active' : 'Inactive'}
             </span>
         );
@@ -309,11 +271,10 @@ const SupplierList = () => {
                 </div>
 
                 {message.text && (
-                    <div className={`flex items-center p-4 rounded-lg border-l-4 ${
-                        message.type === 'success' ? 'bg-green-50 text-green-800 border-green-500' :
+                    <div className={`flex items-center p-4 rounded-lg border-l-4 ${message.type === 'success' ? 'bg-green-50 text-green-800 border-green-500' :
                         message.type === 'error' ? 'bg-red-50 text-red-800 border-red-500' :
-                        'bg-blue-50 text-blue-800 border-blue-500'
-                    } shadow-sm`}>
+                            'bg-blue-50 text-blue-800 border-blue-500'
+                        } shadow-sm`}>
                         {message.type === 'success' && <CheckCircle className="size-5 mr-3 text-green-600" />}
                         {message.type === 'error' && <XCircle className="size-5 mr-3 text-red-600" />}
                         {message.type === 'info' && <Info className="size-5 mr-3 text-blue-600" />}
@@ -387,7 +348,7 @@ const SupplierList = () => {
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {paginatedSuppliers.length > 0 ? paginatedSuppliers.map((s, index) => {
                                         const hasPendingRequest = editRequests.some(req => req.supplierId === s._id && req.status === 'pending_edit') ||
-                                                                   activityRequests.some(req => req.supplierId === s._id && req.status === 'pending_activity');
+                                            activityRequests.some(req => req.supplierId === s._id && req.status === 'pending_activity');
 
                                         const isActionDisabled = s.status !== 'approved' || hasPendingRequest;
 
@@ -400,9 +361,8 @@ const SupplierList = () => {
                                                 <td className="px-4 py-3">{renderDataWithDiff(s._id, 'address', s.address)}</td>
                                                 <td className="px-4 py-3">{renderDataWithDiff(s._id, 'taxId', s.taxId)}</td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                        s.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                                    }`}>
+                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                                        }`}>
                                                         {s.status === 'approved' ? 'Approved' : 'Pending'}
                                                     </span>
                                                 </td>
@@ -414,10 +374,9 @@ const SupplierList = () => {
                                                         <button
                                                             onClick={() => handleEditSupplier(s._id, s.status)}
                                                             disabled={isActionDisabled}
-                                                            className={`p-2 rounded-full ${
-                                                                isActionDisabled ? 'text-gray-400 cursor-not-allowed' :
+                                                            className={`p-2 rounded-full ${isActionDisabled ? 'text-gray-400 cursor-not-allowed' :
                                                                 'text-blue-600 hover:bg-blue-100'
-                                                            }`}
+                                                                }`}
                                                             title={isActionDisabled ? "Cannot edit when not approved or has pending request" : "Edit supplier"}
                                                         >
                                                             <Edit className="size-4" />
@@ -425,9 +384,8 @@ const SupplierList = () => {
                                                         <button
                                                             onClick={() => handleChangeActivityStatus(s._id, s.activityStatus, s.status)}
                                                             disabled={isActionDisabled}
-                                                            className={`p-2 rounded-full ${
-                                                                isActionDisabled ? 'text-gray-400 cursor-not-allowed' : 'text-green-600 hover:bg-green-100'
-                                                            }`}
+                                                            className={`p-2 rounded-full ${isActionDisabled ? 'text-gray-400 cursor-not-allowed' : 'text-green-600 hover:bg-green-100'
+                                                                }`}
                                                             title={isActionDisabled ? "Cannot toggle activity when not approved or has pending request" : "Toggle activity status"}
                                                         >
                                                             {s.activityStatus === 'active' ?
