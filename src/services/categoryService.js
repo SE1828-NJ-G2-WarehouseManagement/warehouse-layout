@@ -5,10 +5,10 @@ class CategoryService {
         this.url = "/categories";
     }
 
-    async getAllCategories(page = 1, pageSize = 10) {
+    async getAllCategories(dataParams) {
         try {
-            const response = await axiosInstance.get(`${this.url}`, {
-                params: { page, pageSize },
+            const response = await axiosInstance.get(`${this.url}/list`, {
+                params: dataParams,
                 requiresAuth: true
             });
             return response.data;
@@ -60,9 +60,9 @@ class CategoryService {
         }
     }
 
-    async rejectCategory(categoryId, userId, reason) { 
+    async rejectCategory(categoryId, userId, note) { 
         try {
-            const response = await axiosInstance.put(`${this.url}/reject/${categoryId}`, { userId, reason }, { // GỬI reason
+            const response = await axiosInstance.put(`${this.url}/reject/${categoryId}`, { userId, note }, { // GỬI reason
                 requiresAuth: true
             });
             return response.data;

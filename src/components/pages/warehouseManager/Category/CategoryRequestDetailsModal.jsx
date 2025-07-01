@@ -9,6 +9,7 @@ import {
 import dayjs from 'dayjs';
 
 import { useCategory } from '../../../../hooks/useCategory';
+import { useAuth } from '../../../../hooks/useAuth';
 
 const { Title, Text } = Typography;
 
@@ -17,10 +18,11 @@ const CategoryRequestDetailsModal = ({
   currentRequest,
   onCancel,
   onApprove,
-  onShowRejectModal, 
-  loadingApprove 
+  onShowRejectModal,
+  loadingApprove
 }) => {
-  const { fetchCategoryById } = useCategory();
+  const { fetchCategoryById, approvalCategory, loading } = useCategory();
+  const { user } = useAuth();
   const [detailedCategory, setDetailedCategory] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
 
@@ -32,7 +34,7 @@ const CategoryRequestDetailsModal = ({
           const details = await fetchCategoryById(currentRequest._id);
           setDetailedCategory(details || null);
         } catch (error) {
-          console.error("Failed to fetch detailed category for modal:", error);
+          console.error("Error fetch category:", error);
           message.error("Failed to load category details.");
           setDetailedCategory(null);
         } finally {
@@ -46,19 +48,29 @@ const CategoryRequestDetailsModal = ({
     fetchDetails();
   }, [visible, currentRequest?._id, fetchCategoryById]);
 
-  const handleApproveClick = () => {
-    if (detailedCategory?._id) {
-        onApprove(detailedCategory._id);
-    } else {
-        message.error("No category ID available for approval.");
+  const handleApproveClick = async () => {
+    if (!detailedCategory?._id) {
+      message.error("No category ID available for approval.");
+      return;
+    }
+    if (!user?._id) {
+      message.error("User ID not found. Please log in again.");
+      return;
+    }
+
+    try {
+      await approvalCategory(detailedCategory._id, user._id);
+      onApprove();
+    } catch (error) {
+      console.log("Error approving category:", error);
     }
   };
 
   const handleRejectClick = () => {
-    if (detailedCategory) { 
-        onShowRejectModal(detailedCategory);
+    if (detailedCategory) {
+      onShowRejectModal(detailedCategory);
     } else {
-        message.error("No category details available for rejection.");
+      message.error("No category details available for rejection.");
     }
   };
 
@@ -90,22 +102,22 @@ const CategoryRequestDetailsModal = ({
   let newStatus = 'N/A';
 
   if (requestType === 'UPDATE') {
-      oldData = {
-          name: displayRequest.name || 'N/A',
-      };
-      newData = {
-          name: displayRequest.pendingChanges?.name || 'N/A',
-      };
+    oldData = {
+      name: displayRequest.name || 'N/A',
+    };
+    newData = {
+      name: displayRequest.pendingChanges?.name || 'N/A',
+    };
   } else if (requestType === 'STATUS_CHANGE') {
-      oldStatus = displayRequest.action || 'N/A';
-      newStatus = displayRequest.pendingChanges?.action || 'N/A';
-      newData = {
-          name: displayRequest.name || 'N/A',
-      };
+    oldStatus = displayRequest.action || 'N/A';
+    newStatus = displayRequest.pendingChanges?.action || 'N/A';
+    newData = {
+      name: displayRequest.name || 'N/A',
+    };
   } else if (requestType === 'CREATE') {
-      newData = {
-          name: displayRequest.name || 'N/A',
-      };
+    newData = {
+      name: displayRequest.name || 'N/A',
+    };
   }
 
   const submittedByFullName = displayRequest.createdBy ? `${displayRequest.createdBy.firstName || ''} ${displayRequest.createdBy.lastName || ''}`.trim() : 'N/A';
@@ -132,8 +144,8 @@ const CategoryRequestDetailsModal = ({
               <Descriptions.Item label={<Text strong>Request Type</Text>}>
                 <Tag color={
                   requestType === 'CREATE' ? 'blue' :
-                  requestType === 'UPDATE' ? 'orange' :
-                  requestType === 'STATUS_CHANGE' ? 'purple' : 'default'
+                    requestType === 'UPDATE' ? 'orange' :
+                      requestType === 'STATUS_CHANGE' ? 'purple' : 'default'
                 }>
                   {requestType?.toUpperCase() || 'N/A'}
                 </Tag>
@@ -144,8 +156,8 @@ const CategoryRequestDetailsModal = ({
               <Descriptions.Item label={<Text strong>Current Status</Text>} span={2}>
                 <Tag color={
                   displayRequest.status === 'PENDING' ? 'gold' :
-                  displayRequest.status === 'APPROVED' ? 'green' :
-                  displayRequest.status === 'REJECTED' ? 'red' : 'default'
+                    displayRequest.status === 'APPROVED' ? 'green' :
+                      displayRequest.status === 'REJECTED' ? 'red' : 'default'
                 }>
                   {displayRequest.status?.toUpperCase() || 'N/A'}
                 </Tag>
@@ -225,7 +237,7 @@ const CategoryRequestDetailsModal = ({
               okText="Yes"
               cancelText="No"
             >
-              <Button type="primary" icon={<CheckCircleOutlined />} loading={loadingApprove} className="rounded-md">
+              <Button type="primary" icon={<CheckCircleOutlined />} loading={loading || loadingApprove} className="rounded-md">
                 Approve
               </Button>
             </Popconfirm>
@@ -235,9 +247,9 @@ const CategoryRequestDetailsModal = ({
           </div>
         )}
         {displayRequest.status !== 'PENDING' && (
-            <div className="flex justify-end mt-8 space-x-4 p-4 bg-white border-t border-gray-200">
-                <Button onClick={onCancel} className="rounded-md">Close</Button>
-            </div>
+          <div className="flex justify-end mt-8 space-x-4 p-4 bg-white border-t border-gray-200">
+            <Button onClick={onCancel} className="rounded-md">Close</Button>
+          </div>
         )}
       </div>
     </Modal>

@@ -9,12 +9,15 @@ import Unauthorized from './components/Unauthorized';
 import ForgotPasswordForm from './components/pages/users/ForgotPassword';
 import VerifyOtpForm from './components/pages/users/VerifyOtpForm';
 import SetNewPasswordForm from './components/pages/users/SetNewPasswordForm';
+import { ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 
 import AuthLayoutSelector from './components/AuthLayoutSelector';
 
 export default function App() {
   return (
     <Router>
+      <ToastContainer/>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginForm />} />

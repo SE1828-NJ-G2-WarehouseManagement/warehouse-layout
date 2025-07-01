@@ -7,7 +7,8 @@ import {
     PlusOutlined, EditOutlined, EyeOutlined, SearchOutlined, ClusterOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useZones } from '../../../hooks/useZones.js';
+import { useZones } from '../../../../hooks/useZones.js';
+import ModalDetailZone from './ModalDetailZone.jsx';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -61,13 +62,13 @@ const ZoneManagement = () => {
     useEffect(() => {
         const lowerCaseSearchTerm = searchTerm.toLowerCase();
         const filtered = zones.filter(zone =>
-            zone.name.toLowerCase().includes(lowerCaseSearchTerm)
+            zone?.name?.toLowerCase().includes(lowerCaseSearchTerm)
         );
         setFilteredZones(filtered);
     }, [searchTerm, zones]); useEffect(() => {
         const lowerCaseSearchTerm = searchTerm.toLowerCase();
         const filtered = zones.filter(zone => {
-            const matchesSearch = zone.name.toLowerCase().includes(lowerCaseSearchTerm);
+            const matchesSearch = zone?.name?.toLowerCase().includes(lowerCaseSearchTerm);
             const matchesStatus = statusFilter === '' || (zone.status && zone.status.toLowerCase() === statusFilter.toLowerCase());
             return matchesSearch && matchesStatus;
         });
@@ -79,7 +80,7 @@ const ZoneManagement = () => {
     useEffect(() => {
         if (isEditModalOpen && currentZone) {
             editForm.setFieldsValue({
-                name: currentZone.name,
+                name: currentZone?.name,
                 storageTemperatureMin: typeof currentZone.storageTemperature?.min === 'number' ? currentZone.storageTemperature.min : null,
                 storageTemperatureMax: typeof currentZone.storageTemperature?.max === 'number' ? currentZone.storageTemperature.max : null,
                 totalCapacity: typeof currentZone.totalCapacity === 'number' ? currentZone.totalCapacity : null,
@@ -120,25 +121,10 @@ const ZoneManagement = () => {
             const result = await createZone(payload);
             await fetchZones();
             console.log("createZone API result:", result);
-
-            if (result.success) {
                 setIsCreateModalOpen(false);
                 createForm.resetFields();
-                console.log("Zone created, data will be refreshed by context.");
-            } else {
-                message.error(result.message || "Failed to create zone. Please try again.");
-                console.error("createZone failed with message:", result.message);
-            }
         } catch (error) {
             console.error('Failed to create zone in component (catch block):', error);
-            if (error.errorFields) {
-                console.error('Ant Design Form validation errors:', error.errorFields);
-            } else if (error.response && error.response.data && error.response.data.message) {
-                message.error(error.response.data.message);
-                console.error("Backend error message:", error.response.data.message);
-            } else {
-                message.error(error.message || 'An unexpected error occurred while creating zone.');
-            }
         }
     };
 
@@ -772,45 +758,9 @@ const ZoneManagement = () => {
                 </Form>
             </Modal>
 
-
+<ModalDetailZone isViewGoodsModalOpen={isViewGoodsModalOpen} handleViewGoodsCancel={handleViewGoodsCancel} currentZone={currentZone} goodsSearchTerm={goodsSearchTerm} setGoodsSearchTerm={setGoodsSearchTerm} filteredGoods={filteredGoods} goodsColumns={goodsColumns} />
             {/* View Goods in Zone Modal */}
-            <Modal
-                title={<Title level={4} className="text-center mb-6">Goods Details in Zone: {currentZone?.name}</Title>}
-                open={isViewGoodsModalOpen}
-                onCancel={handleViewGoodsCancel}
-                footer={null}
-                destroyOnClose
-                width={800}
-                className="rounded-lg"
-            >
-                {currentZone && (
-                    <div className="space-y-4">
-                        <Input
-                            placeholder="Search goods by Name, Unit or Expiry Date"
-                            value={goodsSearchTerm}
-                            onChange={(e) => setGoodsSearchTerm(e.target.value)}
-                            prefix={<SearchOutlined />}
-                            className="rounded-md mb-4"
-                        />
-                        {filteredGoods.length > 0 ? (
-                            <>
-                                <Table
-                                    columns={goodsColumns}
-                                    dataSource={filteredGoods}
-                                    rowKey="id"
-                                    bordered
-                                    pagination={true}
-                                    size="small"
-                                />
-                            </>
-                        ) : (
-                            <div className="text-center py-8">
-                                <Text type="secondary">No goods in this zone or no matching goods found.</Text>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </Modal>
+   
         </div>
     );
 };
