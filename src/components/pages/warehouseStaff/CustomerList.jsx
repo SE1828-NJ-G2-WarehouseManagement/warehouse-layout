@@ -18,15 +18,16 @@ import {
     Loader,
 } from 'lucide-react';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 10; 
 
 const CustomerList = () => {
     const [customers, setCustomers] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState(''); 
+    const [searchInputValue, setSearchInputValue] = useState(''); 
     const [filterActivity, setFilterActivity] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalCustomers, setTotalCustomers] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
+    const [totalCustomers, setTotalCustomers] = useState(0); 
+    const [totalPages, setTotalPages] = useState(0); 
     const [message, setMessage] = useState({ type: '', text: '' });
     const [loading, setLoading] = useState(true);
     const [showCreateForm, setShowCreateForm] = useState(false);
@@ -34,42 +35,40 @@ const CustomerList = () => {
     const [editingCustomer, setEditingCustomer] = useState(null);
     const [refreshFlag, setRefreshFlag] = useState(0);
 
+    useEffect(() => {
+        const debounceTimer = setTimeout(() => {
+            setSearchTerm(searchInputValue);
+        }, 500); 
 
-    // Fetch customers with pagination from server
-    const fetchCustomers = useCallback(async (page = 1, search = '', status = 'all') => {
-        console.log('[DEBUG] fetchCustomers CALLED', { page, search, status });
+        return () => clearTimeout(debounceTimer);
+    }, [searchInputValue]);
 
+    const fetchCustomers = useCallback(async () => {
         setLoading(true);
         try {
             const params = {
-                page: page,
-                limit: ITEMS_PER_PAGE,
-                search: search.trim(),
+                page: currentPage, 
+                limit: ITEMS_PER_PAGE, 
             };
 
-            // Only add status filter if it's not 'all'
-            if (status !== 'all') {
-                params.status = status.toUpperCase();
+            if (filterActivity !== 'all') {
+                params.status = filterActivity.toUpperCase();
             }
 
             const res = await axiosInstance.get('/customers', { params });
 
             const responseData = res.data;
-
-            // Handle response data - could have different structures
             let customersData = [];
             let total = 0;
             let pages = 0;
 
             if (responseData.data && Array.isArray(responseData.data)) {
-                // If there's pagination info
                 customersData = responseData.data;
                 total = responseData.totalCustomers || responseData.total || responseData.totalCount || customersData.length;
                 pages = responseData.totalPages || responseData.pages || Math.ceil(total / ITEMS_PER_PAGE);
             } else if (Array.isArray(responseData)) {
-                // If it returns a direct array
                 customersData = responseData;
-                total = customersData.length;
+                total = customersData.length; 
                 pages = Math.ceil(total / ITEMS_PER_PAGE);
             } else {
                 console.error('Unexpected response structure:', responseData);
@@ -80,10 +79,11 @@ const CustomerList = () => {
                 ...c,
                 status: c.status?.toLowerCase() || 'inactive',
             }));
-
+            
             setCustomers(normalized);
-            setTotalCustomers(total);
+            setTotalCustomers(total); 
             setTotalPages(pages);
+
         } catch (error) {
             console.error("Failed to load customers:", error);
             setMessage({ type: 'error', text: 'Failed to load customers. Please try again.' });
@@ -93,33 +93,45 @@ const CustomerList = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
-
-
-    useEffect(() => {
-        fetchCustomers(currentPage, searchTerm, filterActivity);
-    }, [fetchCustomers, currentPage, searchTerm, filterActivity, refreshFlag]);
+    }, [currentPage, filterActivity, refreshFlag]); 
 
     useEffect(() => {
-        if (currentPage !== 1) {
-            setCurrentPage(1);
+        fetchCustomers();
+    }, [fetchCustomers]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterActivity]);
+
+    const filteredCustomers = useMemo(() => {
+        if (!searchTerm.trim()) {
+            return customers; 
         }
-    }, [searchTerm, filterActivity]);
-
-    // Clear message 
-    useEffect(() => {
-        if (message.text) {
-            const timer = setTimeout(() => setMessage({ type: '', text: '' }), 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [message]);
+        const searchLower = searchTerm.toLowerCase().trim();
+        return customers.filter(customer => {
+            return (
+                customer._id?.toLowerCase().includes(searchLower) ||
+                customer.name?.toLowerCase().includes(searchLower) ||
+                customer.phone?.toLowerCase().includes(searchLower) ||
+                customer.address?.toLowerCase().includes(searchLower)
+            );
+        });
+    }, [customers, searchTerm]); 
 
     const existingCustomerDetails = useMemo(() => {
         return customers.map(c => ({
             name: c.name.trim().toLowerCase(),
             phone: c.phone.trim().toLowerCase(),
         }));
-    }, [customers]);
+        
+    }, [customers]); 
+
+    useEffect(() => {
+        if (message.text) {
+            const timer = setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [message]);
 
     const handleChangeActivityStatus = useCallback(async (customerId, currentStatus) => {
         const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
@@ -157,28 +169,12 @@ const CustomerList = () => {
 
     const handleAddCustomer = () => setShowCreateForm(true);
 
-    const handleCreateCustomerSubmit = useCallback((created) => {
-        const normalizedCustomer = {
-            _id: created._id,
-            name: created.name,
-            phone: created.phone,
-            address: created.address,
-            status: created.status?.toLowerCase() || 'active'
-        };
-
-        setCustomers(prev => {
-            if (currentPage === 1) {
-                return [normalizedCustomer, ...prev];
-            }
-            return prev;
-        });
-
-        setTotalCustomers(prev => prev + 1);
-        setTotalPages(prev => Math.ceil((totalCustomers + 1) / ITEMS_PER_PAGE)); // use current totalCustomers
-        setMessage({ type: 'success', text: `Customer ${created.name} has been successfully created.` });
+    const handleCreateCustomerSubmit = useCallback(async (created) => {
+        setMessage({ type: 'success', text: `Customer ${created.name} has been successfully created. Refreshing list...` });
         setShowCreateForm(false);
-    }, [currentPage, totalCustomers]);
-
+        setCurrentPage(1); 
+        setRefreshFlag(prev => prev + 1); 
+    }, []);
 
     const handleEditCustomer = (customerId) => {
         const customer = customers.find(c => c._id === customerId);
@@ -190,58 +186,61 @@ const CustomerList = () => {
 
     const handleEditCustomerSubmit = useCallback(async (updatedData) => {
         const { _id, name, phone, address, status } = updatedData;
-
         const statusFormatted = status?.toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE';
-
-        const dataToSend = {
-            name,
-            phone,
-            address,
-            status: statusFormatted,
-        };
+        const dataToSend = { name, phone, address, status: statusFormatted };
 
         try {
-            console.log('[DEBUG] Sending PUT:', dataToSend);
-
             const res = await axiosInstance.put(`/customers/${_id}`, dataToSend);
 
             if (res.status === 200 || res.status === 201) {
                 setMessage({ type: 'success', text: `Customer ${name} updated.` });
                 setShowEditForm(false);
                 setEditingCustomer(null);
-                await fetchCustomers(currentPage, searchTerm, filterActivity);
+                setRefreshFlag(prev => prev + 1); 
             } else {
                 throw new Error('Unexpected response status');
             }
         } catch (error) {
-            console.error('[DEBUG] PUT error:', {
-                status: error.response?.status,
-                data: error.response?.data,
-                message: error.response?.data?.error?.[0] || error.response?.data?.message || error.message
-            });
-
             setMessage({
                 type: 'error',
                 text: `Failed to update customer ${name}. Server says: ${error.response?.data?.error?.[0]?.message || error.response?.data?.message || error.message}`
             });
         }
-    }, [fetchCustomers, currentPage, searchTerm, filterActivity]);
+    }, []);
 
-
-    // Handle page change
     const handlePageChange = (newPage) => {
         setCurrentPage(newPage);
     };
 
-    // Handle search with debounce effect
-    const [searchInputValue, setSearchInputValue] = useState('');
-    useEffect(() => {
-        const debounceTimer = setTimeout(() => {
-            setSearchTerm(searchInputValue);
-        }, 500); // 500ms debounce
+    // Clear search function
+    const handleClearSearch = () => {
+        setSearchInputValue('');
+        setSearchTerm(''); 
+    };
 
-        return () => clearTimeout(debounceTimer);
-    }, [searchInputValue]);
+    const getPageNumbers = useMemo(() => {
+        const pageNumbers = [];
+        const maxPagesToShow = 5;
+
+        if (totalPages <= maxPagesToShow) {
+            for (let i = 1; i <= totalPages; i++) {
+                pageNumbers.push(i);
+            }
+        } else {
+            let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+            let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+            if (endPage - startPage + 1 < maxPagesToShow) {
+                startPage = Math.max(1, endPage - maxPagesToShow + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                pageNumbers.push(i);
+            }
+        }
+        return pageNumbers;
+    }, [totalPages, currentPage]);
+
 
     // --- COMPONENT RENDER ---
     return (
@@ -262,8 +261,9 @@ const CustomerList = () => {
                             Customer Management
                         </h1>
                         <p className="text-sm text-gray-600 mt-2">
-                            {searchTerm && ` (filtered by: "${searchTerm}")`}
-                            {filterActivity !== 'all' && ` (${filterActivity} only)`}
+                            Total customers (on server): {totalCustomers}
+                            {searchTerm && ` | Displaying filtered results on current page: ${filteredCustomers.length}`}
+                            {filterActivity !== 'all' && ` | Filter by: ${filterActivity}`}
                         </p>
                     </div>
                 </div>
@@ -287,15 +287,24 @@ const CustomerList = () => {
                         <div className="relative flex-grow">
                             <Search className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400 size-5" />
                             <input
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm"
-                                placeholder="Search by ID, name, phone, address..."
+                                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg shadow-sm text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Search on current page by ID, name, phone, address..."
                                 value={searchInputValue}
                                 onChange={(e) => setSearchInputValue(e.target.value)}
                             />
+                            {searchInputValue && (
+                                <button
+                                    onClick={handleClearSearch}
+                                    className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    title="Clear search"
+                                >
+                                    <XCircle className="size-4" />
+                                </button>
+                            )}
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
                             <select
-                                className="border px-3 py-2 rounded-lg text-sm"
+                                className="border border-gray-300 px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 value={filterActivity}
                                 onChange={(e) => setFilterActivity(e.target.value)}
                             >
@@ -305,7 +314,7 @@ const CustomerList = () => {
                             </select>
                             <button
                                 onClick={handleAddCustomer}
-                                className="bg-blue-600 text-white px-5 py-2 rounded-lg flex items-center gap-2 text-sm hover:bg-blue-700"
+                                className="bg-blue-600 text-white px-5 py-2 rounded-lg flex items-center gap-2 text-sm hover:bg-blue-700 transition-colors"
                             >
                                 <PlusCircle className="size-4" />
                                 Add New Customer
@@ -319,7 +328,7 @@ const CustomerList = () => {
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-4 py-3 text-left font-semibold text-gray-600">No.</th> {/* Added No. column header */}
+                                <th className="px-4 py-3 text-left font-semibold text-gray-600">No.</th>
                                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Name</th>
                                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Phone</th>
                                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Address</th>
@@ -330,14 +339,14 @@ const CustomerList = () => {
                         <tbody className="bg-white divide-y divide-gray-200">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="6" className="px-4 py-6 text-center text-gray-500"> {/* Updated colspan */}
+                                    <td colSpan="6" className="px-4 py-6 text-center text-gray-500">
                                         <Loader className="size-6 animate-spin mx-auto mb-2" />
                                         Loading customers...
                                     </td>
                                 </tr>
-                            ) : customers.length > 0 ? customers.map((c, index) => (
+                            ) : filteredCustomers.length > 0 ? filteredCustomers.map((c, index) => (
                                 <tr key={c._id} className="hover:bg-gray-100">
-                                    <td className="px-4 py-3">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td> {/* Display sequential number */}
+                                    <td className="px-4 py-3">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                                     <td className="px-4 py-3">{c.name}</td>
                                     <td className="px-4 py-3">{c.phone}</td>
                                     <td className="px-4 py-3">{c.address}</td>
@@ -351,14 +360,14 @@ const CustomerList = () => {
                                         <div className="flex justify-center gap-2">
                                             <button
                                                 onClick={() => handleEditCustomer(c._id)}
-                                                className="p-2 rounded-full text-blue-600 hover:bg-blue-100"
+                                                className="p-2 rounded-full text-blue-600 hover:bg-blue-100 transition-colors"
                                                 title="Edit customer"
                                             >
                                                 <Edit className="size-4" />
                                             </button>
                                             <button
                                                 onClick={() => handleChangeActivityStatus(c._id, c.status)}
-                                                className={`p-2 rounded-full ${c.status === 'active' ? 'text-green-600 hover:bg-green-100' : 'text-yellow-600 hover:bg-yellow-100'
+                                                className={`p-2 rounded-full transition-colors ${c.status === 'active' ? 'text-green-600 hover:bg-green-100' : 'text-yellow-600 hover:bg-yellow-100'
                                                     }`}
                                                 title="Toggle activity status"
                                             >
@@ -372,9 +381,22 @@ const CustomerList = () => {
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan="6" className="px-4 py-6 text-center text-gray-500"> {/* Updated colspan */}
+                                    <td colSpan="6" className="px-4 py-6 text-center text-gray-500">
                                         <Info className="size-6 mx-auto mb-2" />
-                                        No customers found.
+                                        {searchTerm ? 
+                                            'No customers match your search criteria on this page.' : 
+                                            'No customers found on this page.'
+                                        }
+                                        {searchTerm && (
+                                            <div className="mt-2">
+                                                <button
+                                                    onClick={handleClearSearch}
+                                                    className="text-blue-600 hover:text-blue-800 text-sm"
+                                                >
+                                                    Clear search
+                                                </button>
+                                            </div>
+                                        )}
                                     </td>
                                 </tr>
                             )}
@@ -392,40 +414,27 @@ const CustomerList = () => {
                             <button
                                 onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                                 disabled={currentPage === 1}
-                                className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
+                                className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition-colors"
                             >
                                 Previous
                             </button>
 
                             {/* Page numbers */}
-                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                let pageNum;
-                                if (totalPages <= 5) {
-                                    pageNum = i + 1;
-                                } else if (currentPage <= 3) {
-                                    pageNum = i + 1;
-                                } else if (currentPage >= totalPages - 2) {
-                                    pageNum = totalPages - 4 + i;
-                                } else {
-                                    pageNum = currentPage - 2 + i;
-                                }
-
-                                return (
-                                    <button
-                                        key={pageNum}
-                                        onClick={() => handlePageChange(pageNum)}
-                                        className={`px-4 py-2 border rounded-lg hover:bg-gray-50 ${pageNum === currentPage ? 'bg-blue-600 text-white border-blue-600' : ''
-                                            }`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                );
-                            })}
+                            {getPageNumbers.map((pageNum) => (
+                                <button
+                                    key={pageNum}
+                                    onClick={() => handlePageChange(pageNum)}
+                                    className={`px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors ${pageNum === currentPage ? 'bg-blue-600 text-white border-blue-600' : ''
+                                        }`}
+                                >
+                                    {pageNum}
+                                </button>
+                            ))}
 
                             <button
                                 onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                                 disabled={currentPage === totalPages}
-                                className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
+                                className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition-colors"
                             >
                                 Next
                             </button>
