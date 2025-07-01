@@ -35,7 +35,7 @@ const CustomerList = () => {
     const [refreshFlag, setRefreshFlag] = useState(0);
 
 
-    // Fetch customers với phân trang từ server
+    // Fetch customers with pagination from server
     const fetchCustomers = useCallback(async (page = 1, search = '', status = 'all') => {
         console.log('[DEBUG] fetchCustomers CALLED', { page, search, status });
 
@@ -47,7 +47,7 @@ const CustomerList = () => {
                 search: search.trim(),
             };
 
-            // Chỉ thêm status filter nếu không phải 'all'
+            // Only add status filter if it's not 'all'
             if (status !== 'all') {
                 params.status = status.toUpperCase();
             }
@@ -56,18 +56,18 @@ const CustomerList = () => {
 
             const responseData = res.data;
 
-            // Xử lý response data - có thể có cấu trúc khác nhau
+            // Handle response data - could have different structures
             let customersData = [];
             let total = 0;
             let pages = 0;
 
             if (responseData.data && Array.isArray(responseData.data)) {
-                // Nếu có pagination info
+                // If there's pagination info
                 customersData = responseData.data;
                 total = responseData.totalCustomers || responseData.total || responseData.totalCount || customersData.length;
                 pages = responseData.totalPages || responseData.pages || Math.ceil(total / ITEMS_PER_PAGE);
             } else if (Array.isArray(responseData)) {
-                // Nếu trả về array trực tiếp
+                // If it returns a direct array
                 customersData = responseData;
                 total = customersData.length;
                 pages = Math.ceil(total / ITEMS_PER_PAGE);
@@ -174,13 +174,10 @@ const CustomerList = () => {
         });
 
         setTotalCustomers(prev => prev + 1);
-        setTotalPages(prev => Math.ceil((totalCustomers + 1) / ITEMS_PER_PAGE)); // dùng totalCustomers hiện tại
+        setTotalPages(prev => Math.ceil((totalCustomers + 1) / ITEMS_PER_PAGE)); // use current totalCustomers
         setMessage({ type: 'success', text: `Customer ${created.name} has been successfully created.` });
         setShowCreateForm(false);
     }, [currentPage, totalCustomers]);
-
-
-
 
 
     const handleEditCustomer = (customerId) => {
@@ -229,7 +226,6 @@ const CustomerList = () => {
             });
         }
     }, [fetchCustomers, currentPage, searchTerm, filterActivity]);
-
 
 
     // Handle page change
@@ -323,6 +319,7 @@ const CustomerList = () => {
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                         <thead className="bg-gray-50">
                             <tr>
+                                <th className="px-4 py-3 text-left font-semibold text-gray-600">No.</th> {/* Added No. column header */}
                                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Name</th>
                                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Phone</th>
                                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Address</th>
@@ -333,13 +330,14 @@ const CustomerList = () => {
                         <tbody className="bg-white divide-y divide-gray-200">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="5" className="px-4 py-6 text-center text-gray-500">
+                                    <td colSpan="6" className="px-4 py-6 text-center text-gray-500"> {/* Updated colspan */}
                                         <Loader className="size-6 animate-spin mx-auto mb-2" />
                                         Loading customers...
                                     </td>
                                 </tr>
-                            ) : customers.length > 0 ? customers.map(c => (
+                            ) : customers.length > 0 ? customers.map((c, index) => (
                                 <tr key={c._id} className="hover:bg-gray-100">
+                                    <td className="px-4 py-3">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td> {/* Display sequential number */}
                                     <td className="px-4 py-3">{c.name}</td>
                                     <td className="px-4 py-3">{c.phone}</td>
                                     <td className="px-4 py-3">{c.address}</td>
@@ -374,7 +372,7 @@ const CustomerList = () => {
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan="5" className="px-4 py-6 text-center text-gray-500">
+                                    <td colSpan="6" className="px-4 py-6 text-center text-gray-500"> {/* Updated colspan */}
                                         <Info className="size-6 mx-auto mb-2" />
                                         No customers found.
                                     </td>
