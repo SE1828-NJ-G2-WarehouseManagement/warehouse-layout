@@ -18,11 +18,11 @@ import {
     ToggleRight,
 } from 'lucide-react';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 10; 
 
 const SupplierList = () => {
     const [suppliers, setSuppliers] = useState([]);
-    const [editRequests, setEditRequests] = useState([]);
+    const [editRequests, setEditRequests] = useState([]); 
     const [activityRequests, setActivityRequests] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
@@ -36,26 +36,42 @@ const SupplierList = () => {
     const [error, setError] = useState(null);
 
     const [actualTotalPages, setActualTotalPages] = useState(0); 
+
     const fetchSuppliers = useCallback(async () => {
         setLoading(true);
         setError(null);
+        setMessage({ type: '', text: '' }); 
         try {
             const queryParams = new URLSearchParams();
             queryParams.append('page', currentPage);
-            queryParams.append('pageSize', ITEMS_PER_PAGE);
 
-            const response = await axiosInstance.get(`/suppliers?${queryParams.toString()}`);
-
-            const apiSuppliers = response.data.data;
-            const totalPageCount = response.data.totalPages; 
-
-            if (!Array.isArray(apiSuppliers)) {
-                throw new Error("Received data from API is not an array of suppliers.");
+            if (searchTerm) {
+                queryParams.append('name', searchTerm);
             }
+
+            if (filterStatus !== 'all') {
+                queryParams.append('status', filterStatus.toUpperCase()); 
+            }
+
+            if (filterActivity !== 'all') {
+                queryParams.append('action', filterActivity.toUpperCase());
+            }
+
+            const response = await axiosInstance.get(`/suppliers/filter?${queryParams.toString()}`);
+
+            console.log("API Response (raw):", response);
+            console.log("API Response (data):", response.data);
+
+            if (!response.data || !Array.isArray(response.data.suppliers)) {
+                throw new Error("Received data from API is not in the expected format (missing 'suppliers' array).");
+            }
+
+            const apiSuppliers = response.data.suppliers;
+            const totalPageCount = response.data.totalPages; 
 
             const processedSuppliers = apiSuppliers.map(s => ({
                 ...s,
-                activityStatus: s.action === 'ACTIVE' ? 'active' : 'inactive',
+                activityStatus: s.action && s.action === 'ACTIVE' ? 'active' : 'inactive',
                 status: s.status ? s.status.toLowerCase() : 'pending' 
             }));
             setSuppliers(processedSuppliers);
@@ -63,16 +79,21 @@ const SupplierList = () => {
 
         } catch (e) {
             console.error("Failed to fetch suppliers:", e);
-            setError(e.response?.data?.message || "Failed to load suppliers. Please try again later.");
-            setMessage({ type: 'error', text: `Error: ${e.response?.data?.message || e.message}. Failed to load suppliers.` });
+            const errorMessage = e.response?.data?.message || e.message || "Failed to load suppliers. Please try again later.";
+            setError(errorMessage);
+            setMessage({ type: 'error', text: `Error: ${errorMessage}. Failed to load suppliers.` });
         } finally {
             setLoading(false);
         }
-    }, [currentPage]); 
+    }, [currentPage, searchTerm, filterStatus, filterActivity]); 
 
     useEffect(() => {
         fetchSuppliers();
     }, [fetchSuppliers]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterStatus, filterActivity]);
 
     const handleClearSearch = () => {
         setSearchTerm('');
@@ -80,36 +101,14 @@ const SupplierList = () => {
 
     const filteredAndSortedSuppliers = useMemo(() => {
         let currentSuppliers = [...suppliers];
-        if (searchTerm) {
-            const lowercasedSearchTerm = searchTerm.toLowerCase();
-            currentSuppliers = currentSuppliers.filter(s =>
-                s.name.toLowerCase().includes(lowercasedSearchTerm) ||
-                (s.phone && s.phone.includes(lowercasedSearchTerm)) ||
-                (s.email && s.email.toLowerCase().includes(lowercasedSearchTerm)) ||
-                (s.address && s.address.toLowerCase().includes(lowercasedSearchTerm)) ||
-                (s.taxId && s.taxId.toLowerCase().includes(lowercasedSearchTerm))
-            );
-        }
-
-        if (filterStatus !== 'all') {
-            currentSuppliers = currentSuppliers.filter(s => s.status === filterStatus);
-        }
-
-        if (filterActivity !== 'all') {
-            currentSuppliers = currentSuppliers.filter(s => s.activityStatus === filterActivity);
-        }
-
-        // Sort by status (pending, then approved, then rejected)
         currentSuppliers.sort((a, b) => {
             const statusOrder = { pending: 1, approved: 2, rejected: 3 };
             return statusOrder[a.status] - statusOrder[b.status];
         });
         return currentSuppliers;
-    }, [suppliers, searchTerm, filterStatus, filterActivity]);
+    }, [suppliers]);
 
-    const paginatedSuppliers = useMemo(() => {
-        return filteredAndSortedSuppliers;
-    }, [filteredAndSortedSuppliers]);
+    const paginatedSuppliers = filteredAndSortedSuppliers; 
 
     const totalPages = actualTotalPages; 
 
@@ -131,32 +130,47 @@ const SupplierList = () => {
         const actionText = newActionStatus === 'ACTIVE' ? 'activate' : 'deactivate';
 
         if (window.confirm(`Are you sure you want to ${actionText} supplier ${supplierId}?`)) {
+            // Store the original suppliers list in case of rollback
+            const originalSuppliers = [...suppliers];
+
+            // 1. Optimistically update the UI FIRST
+            setSuppliers(prevSuppliers => prevSuppliers.map(s => 
+                s._id === supplierId 
+                    ? { ...s, action: newActionStatus, activityStatus: newActionStatus.toLowerCase() } 
+                    : s
+            ));
+            setMessage({ type: 'info', text: `Submitting request to ${actionText} supplier ${supplierId}...` });
+
             try {
+                // 2. Send request to backend
                 await axiosInstance.put(
                     `/suppliers/request-change-action/${supplierId}`,
                     { action: newActionStatus }
                 );
 
+                // 3. Add a pending request to `activityRequests` state for display
                 const requestId = `ACTREQ${(activityRequests.length + 1).toString().padStart(3, '0')}`;
                 setActivityRequests(prev => [
                     ...prev,
                     {
                         id: requestId,
                         supplierId: supplierId,
-                        currentActivityStatus: currentActivityStatus,
-                        newActivityStatus: newActionStatus.toLowerCase(),
+                        currentActivityStatus: currentActivityStatus, 
+                        newActivityStatus: newActionStatus.toLowerCase(), 
                         status: 'pending_activity',
                         timestamp: new Date().toISOString()
                     }
                 ]);
-                fetchSuppliers();
+                
                 setMessage({ type: 'success', text: `Activity status change request for supplier ${supplierId} submitted for approval.` });
             } catch (e) {
+                // 4. Rollback UI if there's an error
+                setSuppliers(originalSuppliers); 
                 console.error("Failed to change activity status:", e);
-                setMessage({ type: 'error', text: `Error changing activity status: ${e.response?.data?.message || e.message}` });
+                setMessage({ type: 'error', text: `Error changing activity status: ${e.response?.data?.message || e.message}. Rolling back.` });
             }
         }
-    }, [editRequests, activityRequests, fetchSuppliers]);
+    }, [editRequests, activityRequests, suppliers]);
 
     const handleEditSupplier = (supplierId, status) => {
         if (status !== 'approved') {
@@ -184,11 +198,11 @@ const SupplierList = () => {
     const handleEditRequestSubmit = async (updatedData) => {
         try {
             const res = await axiosInstance.put(
-                `/suppliers/${updatedData._id}`,
+                `/suppliers/${updatedData._id}`, 
                 updatedData
             );
             console.log("Edit request submitted:", res.data);
-            fetchSuppliers();
+            fetchSuppliers(); 
             setMessage({ type: 'success', text: `Edit request submitted and is pending approval.` });
         } catch (err) {
             console.error("Failed to submit edit request:", err);
@@ -201,7 +215,7 @@ const SupplierList = () => {
             const response = await axiosInstance.post('/suppliers', newSupplier);
             const createdSupplier = response.data;
 
-            fetchSuppliers();
+            fetchSuppliers(); 
 
             setMessage({ type: 'success', text: `Supplier ${createdSupplier._id} created and awaiting approval.` });
             setShowCreateForm(false);
@@ -213,7 +227,7 @@ const SupplierList = () => {
 
     const renderDataWithDiff = (supplierId, fieldName, originalValue) => {
         const request = editRequests.find(req => req.supplierId === supplierId && req.status === 'pending_edit');
-        if (request && request.newData[fieldName] !== originalValue) {
+        if (request && request.newData && request.newData[fieldName] !== originalValue) {
             return (
                 <span className="flex flex-col">
                     <span className="line-through text-red-500">{originalValue}</span>
@@ -224,26 +238,25 @@ const SupplierList = () => {
         return originalValue;
     };
 
-    const renderActivityStatus = (supplierId, currentActivityStatus) => {
+    const renderActivityStatus = (supplierId, currentActivityStatusFromState) => {
         const activityRequest = activityRequests.find(req => req.supplierId === supplierId && req.status === 'pending_activity');
 
+        let displayStatus = currentActivityStatusFromState;
         if (activityRequest) {
-            return (
-                <span className="flex flex-col items-center">
-                    <span className="line-through text-red-500 text-xs">
-                        {currentActivityStatus === 'active' ? 'Active' : 'Inactive'}
-                    </span>
-                    <span className="text-green-600 font-medium text-xs">
-                        {activityRequest.newActivityStatus === 'active' ? 'Active' : 'Inactive'}
-                    </span>
-                </span>
-            );
+            displayStatus = activityRequest.newActivityStatus; 
         }
 
         return (
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${currentActivityStatus === 'active' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                }`}>
-                {currentActivityStatus === 'active' ? 'Active' : 'Inactive'}
+            <span className="flex flex-col items-center">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium 
+                    ${displayStatus === 'active' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                    {displayStatus === 'active' ? 'Active' : 'Inactive'}
+                </span>
+                {activityRequest && (
+                    <span className="text-orange-500 text-xs mt-1">
+                        (Pending Change to {activityRequest.newActivityStatus.charAt(0).toUpperCase() + activityRequest.newActivityStatus.slice(1)})
+                    </span>
+                )}
             </span>
         );
     };
@@ -341,6 +354,7 @@ const SupplierList = () => {
                                         <th className="px-4 py-3 text-left font-semibold text-gray-600">Tax ID</th>
                                         <th className="px-4 py-3 text-center font-semibold text-gray-600">Status</th>
                                         <th className="px-4 py-3 text-center font-semibold text-gray-600">Activity</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-gray-600">Reject Note</th> {/* New Header */}
                                         <th className="px-4 py-3 text-center font-semibold text-gray-600">Actions</th>
                                     </tr>
                                 </thead>
@@ -357,7 +371,7 @@ const SupplierList = () => {
                                                     return 'bg-green-100 text-green-800';
                                                 case 'pending':
                                                     return 'bg-yellow-100 text-yellow-800';
-                                                case 'rejected': // Added rejected style
+                                                case 'rejected': 
                                                     return 'bg-red-100 text-red-800';
                                                 default:
                                                     return 'bg-gray-100 text-gray-800';
@@ -374,11 +388,18 @@ const SupplierList = () => {
                                                 <td className="px-4 py-3">{renderDataWithDiff(s._id, 'taxId', s.taxId)}</td>
                                                 <td className="px-4 py-3 text-center">
                                                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClasses(s.status)}`}>
-                                                        {s.status.charAt(0).toUpperCase() + s.status.slice(1)} {/* Capitalize first letter */}
+                                                        {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
                                                     {renderActivityStatus(s._id, s.activityStatus)}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-700">
+                                                    {s.status === 'rejected' && s.rejectedNote ? (
+                                                        <p className="text-red-600 text-xs italic">{s.rejectedNote}</p>
+                                                    ) : (
+                                                        <span className="text-gray-400 text-xs">-</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
                                                     <div className="flex justify-center gap-2">
@@ -410,7 +431,7 @@ const SupplierList = () => {
                                         );
                                     }) : (
                                         <tr>
-                                            <td colSpan="9" className="px-4 py-6 text-center text-gray-500">
+                                            <td colSpan="10" className="px-4 py-6 text-center text-gray-500"> {/* Updated colspan */}
                                                 <Info className="size-6 mx-auto mb-2" />
                                                 No suppliers found.
                                             </td>
@@ -420,7 +441,7 @@ const SupplierList = () => {
                             </table>
                         </div>
 
-                    
+                        {/* Pagination Controls */}
                         {totalPages > 1 && (
                             <div className="flex justify-center items-center gap-2 mt-6">
                                 <button
