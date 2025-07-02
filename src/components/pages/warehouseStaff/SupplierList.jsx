@@ -35,29 +35,19 @@ const SupplierList = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const [actualTotalPages, setActualTotalPages] = useState(0);
-
+    const [actualTotalPages, setActualTotalPages] = useState(0); 
     const fetchSuppliers = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
             const queryParams = new URLSearchParams();
-            if (searchTerm) {
-                queryParams.append('search', searchTerm);
-            }
-            if (filterStatus !== 'all') {
-                queryParams.append('status', filterStatus.toUpperCase());
-            }
-            if (filterActivity !== 'all') {
-                queryParams.append('action', filterActivity.toUpperCase());
-            }
             queryParams.append('page', currentPage);
             queryParams.append('pageSize', ITEMS_PER_PAGE);
 
             const response = await axiosInstance.get(`/suppliers?${queryParams.toString()}`);
 
             const apiSuppliers = response.data.data;
-            const totalPageCount = response.data.totalPages;
+            const totalPageCount = response.data.totalPages; 
 
             if (!Array.isArray(apiSuppliers)) {
                 throw new Error("Received data from API is not an array of suppliers.");
@@ -66,10 +56,10 @@ const SupplierList = () => {
             const processedSuppliers = apiSuppliers.map(s => ({
                 ...s,
                 activityStatus: s.action === 'ACTIVE' ? 'active' : 'inactive',
-                status: s.status ? s.status.toLowerCase() : 'pending'
+                status: s.status ? s.status.toLowerCase() : 'pending' 
             }));
             setSuppliers(processedSuppliers);
-            setActualTotalPages(totalPageCount);
+            setActualTotalPages(totalPageCount); 
 
         } catch (e) {
             console.error("Failed to fetch suppliers:", e);
@@ -78,31 +68,50 @@ const SupplierList = () => {
         } finally {
             setLoading(false);
         }
-    }, [searchTerm, filterStatus, filterActivity, currentPage]);
+    }, [currentPage]); 
 
     useEffect(() => {
         fetchSuppliers();
     }, [fetchSuppliers]);
 
+    const handleClearSearch = () => {
+        setSearchTerm('');
+    };
+
     const filteredAndSortedSuppliers = useMemo(() => {
         let currentSuppliers = [...suppliers];
+        if (searchTerm) {
+            const lowercasedSearchTerm = searchTerm.toLowerCase();
+            currentSuppliers = currentSuppliers.filter(s =>
+                s.name.toLowerCase().includes(lowercasedSearchTerm) ||
+                (s.phone && s.phone.includes(lowercasedSearchTerm)) ||
+                (s.email && s.email.toLowerCase().includes(lowercasedSearchTerm)) ||
+                (s.address && s.address.toLowerCase().includes(lowercasedSearchTerm)) ||
+                (s.taxId && s.taxId.toLowerCase().includes(lowercasedSearchTerm))
+            );
+        }
+
+        if (filterStatus !== 'all') {
+            currentSuppliers = currentSuppliers.filter(s => s.status === filterStatus);
+        }
+
+        if (filterActivity !== 'all') {
+            currentSuppliers = currentSuppliers.filter(s => s.activityStatus === filterActivity);
+        }
+
+        // Sort by status (pending, then approved, then rejected)
         currentSuppliers.sort((a, b) => {
-            if (a.status === 'pending' && b.status === 'approved') return -1;
-            if (a.status === 'approved' && b.status === 'pending') return 1;
-            return 0;
+            const statusOrder = { pending: 1, approved: 2, rejected: 3 };
+            return statusOrder[a.status] - statusOrder[b.status];
         });
         return currentSuppliers;
-    }, [suppliers]);
+    }, [suppliers, searchTerm, filterStatus, filterActivity]);
 
     const paginatedSuppliers = useMemo(() => {
         return filteredAndSortedSuppliers;
     }, [filteredAndSortedSuppliers]);
 
-    const totalPages = actualTotalPages;
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm, filterStatus, filterActivity]);
+    const totalPages = actualTotalPages; 
 
     const handleChangeActivityStatus = useCallback(async (supplierId, currentActivityStatus, supplierStatus) => {
         if (supplierStatus !== 'approved') {
@@ -140,18 +149,14 @@ const SupplierList = () => {
                         timestamp: new Date().toISOString()
                     }
                 ]);
-                setSuppliers(prevSuppliers =>
-                    prevSuppliers.map(s =>
-                        s._id === supplierId ? { ...s, status: 'pending' } : s
-                    )
-                );
+                fetchSuppliers();
                 setMessage({ type: 'success', text: `Activity status change request for supplier ${supplierId} submitted for approval.` });
             } catch (e) {
                 console.error("Failed to change activity status:", e);
                 setMessage({ type: 'error', text: `Error changing activity status: ${e.response?.data?.message || e.message}` });
             }
         }
-    }, [editRequests, activityRequests]);
+    }, [editRequests, activityRequests, fetchSuppliers]);
 
     const handleEditSupplier = (supplierId, status) => {
         if (status !== 'approved') {
@@ -176,13 +181,14 @@ const SupplierList = () => {
 
     const handleAddSupplier = () => setShowCreateForm(true);
 
-    const  handleEditRequestSubmit = async (updatedData) => {
+    const handleEditRequestSubmit = async (updatedData) => {
         try {
             const res = await axiosInstance.put(
                 `/suppliers/${updatedData._id}`,
                 updatedData
             );
             console.log("Edit request submitted:", res.data);
+            fetchSuppliers();
             setMessage({ type: 'success', text: `Edit request submitted and is pending approval.` });
         } catch (err) {
             console.error("Failed to submit edit request:", err);
@@ -190,28 +196,20 @@ const SupplierList = () => {
         }
     };
 
-
-
     const handleCreateSupplier = useCallback(async (newSupplier) => {
         try {
             const response = await axiosInstance.post('/suppliers', newSupplier);
             const createdSupplier = response.data;
 
-            setSuppliers(prevSuppliers => [
-                {
-                    ...createdSupplier,
-                    status: createdSupplier.status ? createdSupplier.status.toLowerCase() : 'pending',
-                    activityStatus: createdSupplier.action ? createdSupplier.action.toLowerCase() : 'inactive'
-                },
-                ...prevSuppliers
-            ]);
+            fetchSuppliers();
+
             setMessage({ type: 'success', text: `Supplier ${createdSupplier._id} created and awaiting approval.` });
             setShowCreateForm(false);
         } catch (e) {
             console.error("Failed to create supplier:", e);
             throw e;
         }
-    }, []);
+    }, [fetchSuppliers]);
 
     const renderDataWithDiff = (supplierId, fieldName, originalValue) => {
         const request = editRequests.find(req => req.supplierId === supplierId && req.status === 'pending_edit');
@@ -298,6 +296,7 @@ const SupplierList = () => {
                                 <option value="all">All Statuses</option>
                                 <option value="approved">Approved</option>
                                 <option value="pending">Pending</option>
+                                <option value="rejected">Rejected</option> 
                             </select>
                             <select className="border px-3 py-2 rounded-lg text-sm" value={filterActivity} onChange={(e) => setFilterActivity(e.target.value)}>
                                 <option value="all">All Activities</option>
@@ -352,6 +351,19 @@ const SupplierList = () => {
 
                                         const isActionDisabled = s.status !== 'approved' || hasPendingRequest;
 
+                                        const getStatusClasses = (status) => {
+                                            switch (status) {
+                                                case 'approved':
+                                                    return 'bg-green-100 text-green-800';
+                                                case 'pending':
+                                                    return 'bg-yellow-100 text-yellow-800';
+                                                case 'rejected': // Added rejected style
+                                                    return 'bg-red-100 text-red-800';
+                                                default:
+                                                    return 'bg-gray-100 text-gray-800';
+                                            }
+                                        };
+
                                         return (
                                             <tr key={s._id} className="hover:bg-gray-100">
                                                 <td className="px-4 py-3">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
@@ -361,9 +373,8 @@ const SupplierList = () => {
                                                 <td className="px-4 py-3">{renderDataWithDiff(s._id, 'address', s.address)}</td>
                                                 <td className="px-4 py-3">{renderDataWithDiff(s._id, 'taxId', s.taxId)}</td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                                        }`}>
-                                                        {s.status === 'approved' ? 'Approved' : 'Pending'}
+                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClasses(s.status)}`}>
+                                                        {s.status.charAt(0).toUpperCase() + s.status.slice(1)} {/* Capitalize first letter */}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
@@ -409,6 +420,7 @@ const SupplierList = () => {
                             </table>
                         </div>
 
+                    
                         {totalPages > 1 && (
                             <div className="flex justify-center items-center gap-2 mt-6">
                                 <button
