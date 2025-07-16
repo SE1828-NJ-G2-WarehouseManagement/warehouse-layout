@@ -1,80 +1,5 @@
-// import { createContext, useEffect, useState } from "react";
-// import UserService from "../services/userService";
-// import { useNavigate } from "react-router-dom";
-// import { toast } from "react-toastify";
-
-// const AuthContext = createContext();
-// const AuthProvider = ({ children }) => {
-//     const [user, setUser] = useState(null);
-//     const [loading, setLoading] = useState(true);
-//     const navigate = useNavigate();
-//     const userService = new UserService();
-//     useEffect(() => {
-//         const storedUser = localStorage.getItem("user");
-//         if (storedUser) {
-//             try {
-//                 const parsedUser = JSON.parse(storedUser);
-//                 if (parsedUser && parsedUser.role) {
-//                     setUser(parsedUser);
-//                 } else {
-//                     localStorage.removeItem("user");
-//                     setUser(null);
-//                 }
-//             } catch {
-//                 localStorage.removeItem("user");
-//                 setUser(null);
-//             }
-//         } else {
-//             setUser(null);
-//         }
-//         setLoading(false);
-//     }, []);
-
-
-//     const login = async ({ email, password }) => {
-//         if (!email || !password) {
-//             toast.error("Email and password are required.");
-//             return;
-//         }
-
-//         try {
-//             const { data, token } = await userService.login(email, password);
-//             localStorage.setItem("user", JSON.stringify(data));
-//             localStorage.setItem("access_token", JSON.stringify(token));
-//             setUser(data);
-//             toast.success("Login successful!");
-//             navigate("/dashboard");
-//             // eslint-disable-next-line no-unused-vars
-//         } catch (error) {
-//             toast.error("Login failed. Please check your email and password.");
-//         }
-//     };
-
-//     const logout = () => {
-//         localStorage.removeItem("user");
-//         localStorage.removeItem("token");
-//         setUser(null);
-//         navigate("/login");
-//     };
-
-    
-
-
-//     return (
-//         <AuthContext.Provider value={{ login, logout, user, loading }}>
-//             {children}
-//         </AuthContext.Provider>
-//     );
-// }
-
-// export { AuthContext, AuthProvider };
-
-
-
-// src/context/AuthContext.js HOẶC src/hooks/useAuth.js
-
 import { createContext, useEffect, useState } from "react";
-import UserService from "../services/userService"; // Import class UserService
+import UserService from "../services/userService";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -85,13 +10,7 @@ const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    // TẠO INSTANCE CỦA UserService TẠI ĐÂY
-    // Lý tưởng là tạo một lần và sử dụng lại.
-    // Nếu bạn muốn nó là một phần của context value, hãy đảm bảo nó ổn định.
-    // Cách an toàn nhất là tạo nó trong một useMemo hoặc bên ngoài component nếu không có state.
-    // Nhưng vì nó không có state riêng, tạo ở đây là được.
-    const userService = new UserService(); // <--- TẠO INSTANCE TẠI ĐÂY
-
+    const userService = new UserService();
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
@@ -99,12 +18,17 @@ const AuthProvider = ({ children }) => {
                 const parsedUser = JSON.parse(storedUser);
                 if (parsedUser && parsedUser.role) {
                     setUser(parsedUser);
+                    if (parsedUser.email) {
+                        localStorage.setItem("email", parsedUser.email);
+                    }
                 } else {
                     localStorage.removeItem("user");
+                    localStorage.removeItem("email");
                     setUser(null);
                 }
             } catch {
                 localStorage.removeItem("user");
+                localStorage.removeItem("email");
                 setUser(null);
             }
         } else {
@@ -115,11 +39,12 @@ const AuthProvider = ({ children }) => {
 
     const login = async ({ email, password }) => {
         try {
-            // GỌI PHƯƠNG THỨC TRÊN INSTANCE ĐÃ TẠO
-            const { data, token } = await userService.login(email, password); // SỬ DỤNG userService.login
+            const { data, token } = await userService.login(email, password);
 
             localStorage.setItem("user", JSON.stringify(data));
             localStorage.setItem("access_token", JSON.stringify(token));
+            localStorage.setItem("email", data.email); 
+
             setUser(data);
             toast.success("Login successful!");
             navigate("/dashboard");
@@ -134,18 +59,20 @@ const AuthProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem("user");
         localStorage.removeItem("access_token");
+        localStorage.removeItem("email"); 
         setUser(null);
         navigate("/login");
     };
 
     const fetchUserProfile = async () => {
-        setLoading(true);
         try {
-            // GỌI PHƯƠNG THỨC TRÊN INSTANCE ĐÃ TẠO
-            const result = await userService.viewProfile(); // SỬ DỤNG userService.viewProfile
+            const result = await userService.viewProfile();
             if (result?.isSuccess && result.user) {
                 setUser(result.user);
                 localStorage.setItem("user", JSON.stringify(result.user));
+                if (result.user.email) {
+                    localStorage.setItem("email", result.user.email); 
+                }
                 return { success: true, user: result.user };
             } else {
                 toast.error(result?.message || "Failed to fetch profile. Please log in again.");
@@ -161,14 +88,29 @@ const AuthProvider = ({ children }) => {
         }
     };
 
-    const updateProfile = async (updatedData) => {
+    const updateProfile = async (data) => {
         setLoading(true);
         try {
-            // GỌI PHƯƠNG THỨC TRÊN INSTANCE ĐÃ TẠO
-            const result = await userService.updateProfile(updatedData); // SỬ DỤNG userService.updateProfile
+            const formData = new FormData();
+            formData.append('firstName', data.firstName);
+            formData.append('lastName', data.lastName);
+            formData.append('email', data.email); 
+            formData.append('phone', data.phone);
+
+            if (data.avatarFile) {
+                formData.append('avatar', data.avatarFile);
+            } else if (data.avatar === null) {
+                formData.append('avatar', 'null');
+            }
+
+            const result = await userService.updateProfile(formData);
+
             if (result?.isSuccess && result.user) {
                 setUser(result.user);
                 localStorage.setItem("user", JSON.stringify(result.user));
+                if (result.user.email) {
+                    localStorage.setItem("email", result.user.email);
+                }
                 toast.success(result.message || "Profile updated successfully!");
                 return { success: true, user: result.user };
             } else {
