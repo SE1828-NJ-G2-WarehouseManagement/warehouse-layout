@@ -1,5 +1,5 @@
 import axiosInstance from "../config/axios";
-import { message } from 'antd'; // Make sure Ant Design message is imported
+import { message } from 'antd'; 
 
 class UserService {
   constructor() {

@@ -5,25 +5,38 @@ import Sidebar from './common/Sidebar';
 import Header from './common/Header';
 
 import ManagerDashboard from './pages/warehouseManager/Dashboard';
-import ZoneManagement from './pages/warehouseManager/ZoneManagement';
+import ZoneManagement from './pages/warehouseManager/Zone/ZoneManagement';
 
 import Profile from './common/Profile';
 
 
 import { useAuth } from '../hooks/useAuth';
 import Settings from './common/Settings';
-import SupplierManagement from './pages/warehouseManager/SupplierManagement';
-import CategoryManagement from './pages/warehouseManager/CategoryManagement';
-import ProductManagement from './pages/warehouseManager/ProductManagement';
+import SupplierManagement from './pages/warehouseManager/Supplier/SupplierManagement';
+import CategoryManagement from './pages/warehouseManager/Category/CategoryManagement';
+import ProductManagement from './pages/warehouseManager/Product/ProductManagement';
 import IncomingShipmentsApproval from './pages/warehouseManager/IncomingShipmentsApproval';
 import ImportExportHistory from './pages/warehouseManager/ImportExportHistory';
+import { ZoneProvider } from '../context/ZoneContext';
+import { SupplierProvider } from '../context/SupplierContext';
+import { CategoryProvider } from '../context/CategoryContext';
+
+
+const formatKeyForDisplay = (key) => {
+  if (!key) return '';
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (str) => str.toUpperCase())
+    .trim();
+};
 
 
 const ManagerMainLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-  const [selectedKey, setSelectedKey] = useState('dashboard');
+  const [currentSelectedKey, setCurrentSelectedKey] = useState('dashboard');
+  const [displaySelectedKey, setDisplaySelectedKey] = useState('Dashboard');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notification, setNotification] = useState(null);
   const { user, logout } = useAuth();
@@ -31,45 +44,39 @@ const ManagerMainLayout = () => {
   useEffect(() => {
     const pathToKey = {
       '/dashboard': 'dashboard',
-      '/zoneList': 'zones',
-      '/importExportHistory': 'importExport',
-      // '/reviewImportRequests': 'importReview',
-      // '/reviewExportRequests': 'exportReview',
-      '/incomingShipment': 'incomingShipment',
-      // '/reviewInternalZoneTransfer': 'transferZoneReview',
-      // '/reviewInternalWarehouseTransfer': 'transferWarehouseReview',
-      '/suppliers': 'supplierManagement',
-      // '/customers': 'customerManagement',
-      '/products': 'productManagement',
-      '/categories': 'categoriesManagement',
-      // '/reports': 'reports',
+      '/zone-management': 'zones',
+      '/import-export': 'importExportHistory',
+      '/incoming-shipment': 'incomingShipment',
+      '/suppliers-management': 'supplierManagement',
+      '/product-management': 'productManagement',
+      '/categories-management': 'categoriesManagement',
       '/profile': 'profile',
       '/settings': 'settings',
     };
 
     const pathname = location.pathname;
     let matchedKey = 'dashboard';
+
     for (const path in pathToKey) {
       if (pathname === path) {
         matchedKey = pathToKey[path];
         break;
       } else if (path.includes(':') && pathname.startsWith(path.substring(0, path.indexOf(':')))) {
-        // eslint-disable-next-line no-unused-vars
         matchedKey = pathToKey[path];
         break;
       }
-    } 
-    // setSelectedKey(matchedKey);
+    }
+    setCurrentSelectedKey(matchedKey);
+    setDisplaySelectedKey(formatKeyForDisplay(matchedKey));
   }, [location.pathname]);
 
   const showNotification = (type, message, description) => {
     setNotification({ type, message, description });
-    setTimeout(() => setNotification(null), 3000);
   };
 
   const handleLogout = () => {
     setShowUserMenu(false);
-    showNotification('info', 'Logout successfully', 'See you again!');
+    showNotification('info', 'Logout successful', 'See you again!');
     setTimeout(() => {
       logout();
       navigate('/login');
@@ -78,28 +85,27 @@ const ManagerMainLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Notification notification={notification} />
+      {notification && (
+        <div className="fixed top-4 right-4 z-[1000]">
+          <Notification notification={notification} onClose={() => setNotification(null)} />
+        </div>
+      )}
 
       <Sidebar
         collapsed={collapsed}
         user={user}
-        selectedKey={selectedKey}
+        selectedKey={currentSelectedKey}
         setSelectedKey={(key) => {
-          setSelectedKey(key);
+          setCurrentSelectedKey(key);
+          setDisplaySelectedKey(formatKeyForDisplay(key));
           const keyToPath = {
             dashboard: '/dashboard',
             zones: '/zone-management',
             importExportHistory: '/import-export',
-            // importReview: '/reviewImportRequests',
-            // exportReview: '/reviewExportRequests',
             incomingShipment: '/incoming-shipment',
-            // transferZoneReview: '/reviewInternalZoneTransfer',
-            // transferWarehouseReview: '/reviewInternalWarehouseTransfer',
             supplierManagement: '/suppliers-management',
-            // customerManagement: '/customers',
             productManagement: '/product-management',
             categoriesManagement: '/categories-management',
-            // reports: '/reports',
             profile: '/profile',
             settings: '/settings',
           };
@@ -113,7 +119,7 @@ const ManagerMainLayout = () => {
         <Header
           collapsed={collapsed}
           setCollapsed={setCollapsed}
-          selectedKey={selectedKey}
+          selectedKey={displaySelectedKey}
           user={user}
           showUserMenu={showUserMenu}
           setShowUserMenu={setShowUserMenu}
@@ -123,17 +129,27 @@ const ManagerMainLayout = () => {
         <main className="flex-1 p-6">
           <Routes>
             <Route index element={<Navigate to="dashboard" replace />} />
-
             <Route path="dashboard" element={<ManagerDashboard />} />
-            <Route path="zone-management" element={<ZoneManagement/>}/>
-            <Route path="suppliers-management" element={<SupplierManagement/>}/>
-            <Route path="categories-management" element={<CategoryManagement/>}/>
-            <Route path="product-management" element={<ProductManagement/>}/>
-            <Route path="incoming-shipment" element={<IncomingShipmentsApproval/>}/>
-            <Route path="import-export" element={<ImportExportHistory/>}/>
+            <Route path="zone-management" element={
+              <ZoneProvider>
+                <ZoneManagement />
+              </ZoneProvider>
+            } />
+            <Route path="suppliers-management" element={
+              <SupplierProvider>
+                <SupplierManagement />
+              </SupplierProvider>
+            } />
+            <Route path="categories-management" element={
+              <CategoryProvider>
+                <CategoryManagement />
+              </CategoryProvider>
+            } />
+            <Route path="product-management" element={<ProductManagement />} />
+            <Route path="incoming-shipment" element={<IncomingShipmentsApproval />} />
+            <Route path="import-export" element={<ImportExportHistory />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
-
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
         </main>
