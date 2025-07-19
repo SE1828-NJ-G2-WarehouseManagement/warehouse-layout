@@ -12,9 +12,14 @@ import {
   ShoppingCart,
   Weight,
   Thermometer,
+  Eye,
+  Link,
 } from "lucide-react";
+import { Button } from "antd";
+import { useNavigate } from "react-router-dom";
 
 const ImportTransaction = () => {
+  const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState([]);
   const [zones, setZones] = useState([]);
   const [productsList, setProductsList] = useState([]);
@@ -417,11 +422,19 @@ const ImportTransaction = () => {
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      <div className="flex items-center space-x-3 mb-6">
-        <FilePlus className="text-blue-600" size={28} />
-        <h1 className="text-3xl font-bold text-gray-800">
-          Create Import Transaction
-        </h1>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center space-x-3">
+          <FilePlus className="text-blue-600" size={28} />
+          <h1 className="text-3xl font-bold text-gray-800">
+            Create Import Transaction
+          </h1>
+        </div>
+        <div>
+          <Button className="p-2" type="primary" onClick={() => navigate("/historyImport")}>
+            <Eye className="mr-1" size={20} />
+            View History Import
+          </Button>
+        </div>
       </div>
 
       {messages.text && (
