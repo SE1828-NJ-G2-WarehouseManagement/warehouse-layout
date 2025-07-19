@@ -62,7 +62,7 @@ class CategoryService {
 
     async rejectCategory(categoryId, userId, note) { 
         try {
-            const response = await axiosInstance.put(`${this.url}/reject/${categoryId}`, { userId, note }, { // GỬI reason
+            const response = await axiosInstance.put(`${this.url}/reject/${categoryId}`, { userId, note }, {
                 requiresAuth: true
             });
             return response.data;

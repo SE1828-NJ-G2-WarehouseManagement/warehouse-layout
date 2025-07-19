@@ -113,14 +113,13 @@ const SupplierManagement = () => {
 
   const mapApiSupplierToDisplay = (apiSupplier) => {
     const requestType = getSupplierRequestType(apiSupplier);
-    // Lấy createdBy từ apiSupplier (có sẵn trong response /suppliers/all)
     const createdBy = apiSupplier.createdBy ?
       `${apiSupplier.createdBy.firstName || ''} ${apiSupplier.createdBy.lastName || ''}`.trim() || apiSupplier.createdBy.email :
       'N/A';
 
     let supplierDetails;
 
-    if (requestType === 'Create') {
+    if (requestType === 'CREATE') {
       supplierDetails = {
         name: apiSupplier.name,
         contactPerson: apiSupplier.contactPerson || 'N/A',
@@ -131,9 +130,9 @@ const SupplierManagement = () => {
         taxId: apiSupplier.taxId,
         status: apiSupplier.status,
       };
-    } else if (requestType === 'Update') {
+    } else if (requestType === 'UPDATE') {
       supplierDetails = {
-        old: { // Giả định backend có thể gửi các trường này nếu là Update request
+        old: { 
           name: apiSupplier.oldName || 'N/A',
           contactPerson: apiSupplier.oldContactPerson || 'N/A',
           email: apiSupplier.oldEmail || 'N/A',
@@ -152,7 +151,7 @@ const SupplierManagement = () => {
           taxId: apiSupplier.taxId,
         }
       };
-    } else if (requestType === 'Status Change') {
+    } else if (requestType === 'STATUS CHANGE') {
       supplierDetails = {
         name: apiSupplier.name,
         oldStatus: apiSupplier.previousStatus || 'N/A',

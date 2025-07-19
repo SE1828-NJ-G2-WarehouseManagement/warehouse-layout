@@ -10,11 +10,18 @@ const SupplierProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [pageIndex, setPageIndex] = useState(1);
     const [totalItem, setTotalItem] = useState(0);
+    const [dataParams, setDataParams] = useState({
+        page: 1,
+        size: 10,
+        type: "",
+        status: "",
+        name: ""
+    });
     const supplierService = new SupplierService();
     
     useEffect(() => {
-        fetchAllSuppliers(pageIndex);
-    }, [pageIndex]);
+        fetchAllSuppliers(dataParams);
+    }, [dataParams]);
 
     const fetchSuppliersByApprove = async () => {
         try {
@@ -28,13 +35,12 @@ const SupplierProvider = ({ children }) => {
         }
     };
 
-    const fetchAllSuppliers = async (page) => {
-        console.log(`Fetching all suppliers for page ${page} - START`);
+    const fetchAllSuppliers = async (params) => {
         setLoading(true); 
         try {
-            const response = await supplierService.getAllSuppliers(page); 
-            setAllSuppliers(response.data);  
-            setTotalItem(response.total || 0); 
+            const response = await supplierService.getAllSuppliers(params); 
+            setAllSuppliers(response?.data);  
+            setTotalItem(response?.total || 0); 
         } catch (error) {
             console.error("Error fetching all suppliers:", error);
             toast.error("Failed to fetch all suppliers.");
@@ -94,7 +100,7 @@ const SupplierProvider = ({ children }) => {
     };
 
     return (
-        <SupplierContext.Provider value={{ fetchSupplierById, allSuppliers, pendingSuppliers, loading, fetchSuppliersByApprove, fetchPendingSuppliers, approveSupplier, rejectSupplier, fetchAllSuppliers, pageIndex, setPageIndex, totalItem }}>
+        <SupplierContext.Provider value={{ fetchSupplierById, allSuppliers, pendingSuppliers, loading, fetchSuppliersByApprove, fetchPendingSuppliers, approveSupplier, rejectSupplier, fetchAllSuppliers, pageIndex, setPageIndex, totalItem, dataParams, setDataParams }}>
             {children}
         </SupplierContext.Provider>
     );
