@@ -3,7 +3,7 @@ import { toast } from "react-toastify";
 import ProductService from "../services/productService";
 
 const ProductContext = createContext();
-const productService = new ProductService(); // Đưa ra ngoài component
+const productService = new ProductService(); 
 
 const ProductProvider = ({ children }) => {
   const [products, setProducts] = useState([]);
@@ -23,8 +23,17 @@ const ProductProvider = ({ children }) => {
         setLoading(false);
       }
     },
-    [] // Không cần dependency nữa!
+    [] 
   );
+
+   const uploadProductImage = async (imageFile) => {
+     return await productService.uploadImage(imageFile);
+   };
+
+   const createProduct = async (productData) => {
+     return await productService.createProduct(productData);
+   };
+
 
   useEffect(() => {
     fetchAllProducts(params);
@@ -32,7 +41,14 @@ const ProductProvider = ({ children }) => {
 
   return (
     <ProductContext.Provider
-      value={{ products, loading, fetchAllProducts, setParams }}
+      value={{
+        products,
+        loading,
+        fetchAllProducts,
+        setParams,
+        uploadProductImage,
+        createProduct,
+      }}
     >
       {children}
     </ProductContext.Provider>

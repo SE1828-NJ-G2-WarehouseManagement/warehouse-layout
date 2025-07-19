@@ -9,6 +9,7 @@ import { Link } from "react-router-dom";
 import CreateProduct from "./CreateProduct";
 import EditProduct from "./EditProduct";
 import { ProductContext } from "../../../context/ProductContext"; // Thêm dòng này
+import CategoryService from "../../../services/categoryService";
 
 import {
   ChevronRight,
@@ -47,7 +48,7 @@ const ProductList = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-
+  const [categories, setCategories] = useState([]);
   // Lấy dữ liệu từ API khi mount
   useEffect(() => {
     fetchAllProducts();
@@ -216,7 +217,20 @@ const ProductList = () => {
     }
   };
 
-  const handleAddProduct = () => setShowCreateForm(true);
+  const handleAddProduct = async () => {
+    try {
+      const categoryService = new CategoryService();
+      const data = await categoryService.getActiveCategories();
+      setCategories(data);
+      setShowCreateForm(true);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      setMessage({
+        type: "error",
+        text: "Failed to fetch categories for product creation.",
+      });
+    }
+  };
 
   const handleEditRequestSubmit = useCallback(
     (updatedData) => {
@@ -616,13 +630,14 @@ const ProductList = () => {
           <CreateProduct
             onClose={() => setShowCreateForm(false)}
             onSubmit={(newProductData) => {
-              // Tùy chỉnh lại nếu muốn gọi API tạo mới
               setMessage({
                 type: "success",
                 text: `Product has been created and is pending approval.`,
               });
+              fetchAllProducts(); // Thêm dòng này để load lại danh sách sản phẩm
             }}
             existingProductNames={existingProductNames}
+            categories={categories}
           />
         )}
         {showEditForm && editingProduct && (

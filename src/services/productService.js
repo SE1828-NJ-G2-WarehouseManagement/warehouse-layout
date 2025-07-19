@@ -17,6 +17,32 @@ class ProductService {
       throw error;
     }
   }
+
+  async uploadImage(imageFile) {
+    try {
+      const formData = new FormData();
+      formData.append("image", imageFile);
+      const response = await axiosInstance.post(
+        `${this.url}/upload-image`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      return response.data.imageUrl;
+    } catch (error) {
+      console.error("Error in ProductService.uploadImage:", error);
+      throw error;
+    }
+  }
+
+  async createProduct(productData) {
+    try {
+      const response = await axiosInstance.post(`${this.url}`, productData);
+      return response.data;
+    } catch (error) {
+      console.error("Error in ProductService.createProduct:", error);
+      throw error;
+    }
+  }
 }
 
 export default ProductService;
