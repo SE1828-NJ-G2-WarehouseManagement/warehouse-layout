@@ -9,12 +9,14 @@ import {
 import dayjs from 'dayjs';
 import { useZones } from '../../../../hooks/useZones.js';
 import ModalDetailZone from './ModalDetailZone.jsx';
+import ModalCreateZone from './ModalCreateZone.jsx';
+import ModalEditZone from './ModalEditZone.jsx';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const ZoneManagement = () => {
-    const { zones, loading, fetchZones, createZone, updateZone, pageIndex, setPageIndex, totalItem, allZonesTotalCapacity, changeZoneStatus } = useZones();
+    const { zones, loading, fetchZones, createZone, updateZone, pageIndex, setPageIndex, totalItem, allZonesTotalCapacity, changeZoneStatus, setDataParams, dataParams, pageSize, setPageSize } = useZones();
     const [filteredZones, setFilteredZones] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -24,8 +26,7 @@ const ZoneManagement = () => {
     const [goodsSearchTerm, setGoodsSearchTerm] = useState('');
     const [createForm] = Form.useForm();
     const [editForm] = Form.useForm();
-    const [statusFilter, setStatusFilter] = useState('');
-
+    const [statusFilter, setStatusFilter] = useState('All Status');
     const [currentWarehouseTotalCapacity, setCurrentWarehouseTotalCapacity] = useState(0);
     const totalWarehouseCapacity = currentWarehouseTotalCapacity || 0;
     const usedWarehouseCapacity = allZonesTotalCapacity || 0;
@@ -43,10 +44,6 @@ const ZoneManagement = () => {
     }
 
     useEffect(() => {
-        fetchZones();
-    }, []);
-
-    useEffect(() => {
         if (zones && zones.length > 0 && zones[0]?.warehouseId) {
             const warehouseInfo = zones[0].warehouseId;
             if (warehouseInfo && typeof warehouseInfo.totalCapacity === 'number') {
@@ -60,22 +57,19 @@ const ZoneManagement = () => {
     }, [zones]);
 
     useEffect(() => {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        const filtered = zones.filter(zone =>
-            zone?.name?.toLowerCase().includes(lowerCaseSearchTerm)
-        );
-        setFilteredZones(filtered);
-    }, [searchTerm, zones]); useEffect(() => {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        const filtered = zones.filter(zone => {
-            const matchesSearch = zone?.name?.toLowerCase().includes(lowerCaseSearchTerm);
-            const matchesStatus = statusFilter === '' || (zone.status && zone.status.toLowerCase() === statusFilter.toLowerCase());
-            return matchesSearch && matchesStatus;
-        });
-        setFilteredZones(filtered);
-        // setPageIndex(1);
-    }, [searchTerm, statusFilter, zones, setPageIndex]);
+        let tempFiltered = [...zones]
+        tempFiltered.sort((a, b) => {
+            const statusOrder = { 'ACTIVE': 1, 'INACTIVE': 2 };
+            const statusA = statusOrder[a.status?.toUpperCase()] || 99;
+            const statusB = statusOrder[b.status?.toUpperCase()] || 99;
 
+            if (statusA !== statusB) {
+                return statusA - statusB;
+            }
+            return dayjs(b.createdAt).diff(dayjs(a.createdAt));
+        })
+        setFilteredZones(tempFiltered);
+    }, [searchTerm, zones, statusFilter]);
 
     useEffect(() => {
         if (isEditModalOpen && currentZone) {
@@ -121,8 +115,8 @@ const ZoneManagement = () => {
             const result = await createZone(payload);
             await fetchZones();
             console.log("createZone API result:", result);
-                setIsCreateModalOpen(false);
-                createForm.resetFields();
+            setIsCreateModalOpen(false);
+            createForm.resetFields();
         } catch (error) {
             console.error('Failed to create zone in component (catch block):', error);
         }
@@ -224,7 +218,7 @@ const ZoneManagement = () => {
         {
             title: 'No.',
             key: 'serialNo',
-            render: (text, record, index) => index + 1,
+            render: (text, record, index) => (pageIndex - 1) * pageSize + index + 1,
             width: '5%',
         },
         {
@@ -351,8 +345,12 @@ const ZoneManagement = () => {
         },
     ];
 
-    const onChangePage = (page) => {
-        setPageIndex(page)
+    const onChangePage = (page, size) => {
+        setPageIndex(page);
+        setDataParams({ ...dataParams, page })
+        if (size !== pageSize) {
+            setPageSize(size);
+        }
     };
 
     return (
@@ -413,13 +411,19 @@ const ZoneManagement = () => {
                             placeholder="Search by zone name"
                             prefix={<SearchOutlined />}
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value)
+                                setDataParams({ ...dataParams, name: e.target.value })
+                            }}
                             style={{ width: 300 }}
                         />
                         <Select
                             placeholder="Filter by status"
                             value={statusFilter}
-                            onChange={setStatusFilter}
+                            onChange={(value) => {
+                                setStatusFilter(value)
+                                setDataParams({ ...dataParams, status: value || "" })
+                            }}
                             style={{ width: 200 }}
                             allowClear
                         >
@@ -461,306 +465,14 @@ const ZoneManagement = () => {
                         }}
                     />
 
-                    <Pagination current={pageIndex} onChange={onChangePage} pageSize={10} total={totalItem} align="end" />
+                    <Pagination current={pageIndex} onChange={onChangePage} pageSize={pageSize} total={totalItem} align="end" />
                 </Space>
             </Card>
 
-            {/* Create New Zone  */}
-            <Modal
-                title={<Title level={4} className="text-center mb-6">Create New Zone</Title>}
-                open={isCreateModalOpen}
-                onCancel={handleCreateCancel}
-                footer={null}
-                destroyOnClose
-                width={600}
-                className="rounded-lg"
-            >
-                <Form
-                    form={createForm}
-                    layout="vertical"
-                    name="create_zone_form"
-                    onFinish={handleCreateSubmit}
-                    initialValues={{}}
-                >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                        <Form.Item
-                            label={<Text strong>Zone Name</Text>}
-                            name="name"
-                            rules={[
-                                { required: true, message: 'Zone name is required.' },
-                                { min: 3, message: 'Zone name must be at least 3 characters.' }
-                            ]}
-                            className="mb-4 md:col-span-2"
-                        >
-                            <Input placeholder="Enter zone name" className="rounded-md" />
-                        </Form.Item>
+            <ModalCreateZone currentZone={currentZone} loading={loading} allZonesTotalCapacity={allZonesTotalCapacity} handleCreateCancel={handleCreateCancel} isCreateModalOpen={isCreateModalOpen} createForm={createForm} handleCreateSubmit={handleCreateSubmit} currentWarehouseTotalCapacity={currentWarehouseTotalCapacity} />
+            <ModalEditZone isEditModalOpen={isEditModalOpen} handleEditCancel={handleEditCancel} editForm={editForm} handleEditSubmit={handleEditSubmit} currentWarehouseTotalCapacity={currentWarehouseTotalCapacity} loading={loading} allZonesTotalCapacity={allZonesTotalCapacity} currentZone={currentZone} />
+            <ModalDetailZone isViewGoodsModalOpen={isViewGoodsModalOpen} handleViewGoodsCancel={handleViewGoodsCancel} currentZone={currentZone} goodsSearchTerm={goodsSearchTerm} setGoodsSearchTerm={setGoodsSearchTerm} filteredGoods={filteredGoods} goodsColumns={goodsColumns} />
 
-
-
-                        <Form.Item
-                            label={<Text strong>Min Storage Temperature (°C)</Text>}
-                            name="storageTemperatureMin"
-                            rules={[
-                                { required: true, message: 'Min temperature is required.' },
-                                { type: 'number', message: 'Please enter a number.' },
-                            ]}
-                            className="mb-4"
-                        >
-                            <InputNumber min={-100} max={100} style={{ width: '100%' }} placeholder="Enter min temperature" className="rounded-md" />
-                        </Form.Item>
-
-                        <Form.Item
-                            label={<Text strong>Max Storage Temperature (°C)</Text>}
-                            name="storageTemperatureMax"
-                            rules={[
-                                { required: true, message: 'Max temperature is required.' },
-                                { type: 'number', message: 'Please enter a number.' },
-                                ({ getFieldValue }) => ({
-                                    validator(_, value) {
-                                        if (value === undefined || getFieldValue('storageTemperatureMin') === undefined) {
-                                            return Promise.resolve();
-                                        }
-                                        if (value > getFieldValue('storageTemperatureMin')) {
-                                            return Promise.resolve();
-                                        }
-                                        return Promise.reject(new Error('Max temperature must be greater than or equal to min temperature.'));
-                                    },
-                                }),
-                            ]}
-                            className="mb-4"
-                        >
-                            <InputNumber min={-100} max={100} style={{ width: '100%' }} placeholder="Enter max temperature" className="rounded-md" />
-                        </Form.Item>
-
-                        <Form.Item
-                            label={<Text strong>Total Capacity</Text>}
-                            name="totalCapacity"
-                            rules={[
-                                { required: true, message: 'Total capacity is required.' },
-                                {
-                                    type: 'number',
-                                    min: 0,
-                                    message: 'Please enter a non-negative number.',
-                                    transform: (value) => value === '' ? null : Number(value)
-                                },
-                                // eslint-disable-next-line no-unused-vars
-                                ({ getFieldValue }) => ({
-                                    validator(_, value) {
-                                        if (value === null || value === undefined || isNaN(value) || typeof value !== 'number') {
-                                            return Promise.resolve();
-                                        }
-                                        if (value <= 0) {
-                                            return Promise.reject(new Error('Capacity must be a positive number (greater than 0).'));
-                                        }
-
-                                        if (currentWarehouseTotalCapacity === 0 && !loading) {
-                                            return Promise.reject(new Error("Unable to verify warehouse capacity. Please refresh the page and try again."));
-                                        }
-
-                                        const capacityOfCurrentZoneBeforeEdit = currentZone?.totalCapacity || 0;
-                                        const totalCapacityOfOtherZones = allZonesTotalCapacity - capacityOfCurrentZoneBeforeEdit;
-
-                                        const remainingWarehouseCapacityForThisZone = currentWarehouseTotalCapacity - totalCapacityOfOtherZones;
-
-                                        if (value > remainingWarehouseCapacityForThisZone) {
-                                            return Promise.reject(new Error(`Zone capacity (${value}) cannot exceed available capacity (${remainingWarehouseCapacityForThisZone}).`));
-                                        }
-                                        return Promise.resolve();
-                                    },
-                                }),
-                            ]}
-                            className="col-span-2 mb-6"
-                        >
-                            <InputNumber
-                                min={0}
-                                style={{ width: '100%' }}
-                                placeholder="Enter total capacity"
-                                className="rounded-md"
-                                parser={value => value === '' ? null : Number(value)}
-                                formatter={value => `${value}`}
-                            />
-                        </Form.Item>
-                    </div>
-
-                    <Form.Item className="flex justify-end mt-4">
-                        <Space>
-                            <Button onClick={handleCreateCancel} className="rounded-md">Cancel</Button>
-                            <Button type="primary" htmlType="submit" loading={loading} className="rounded-md">
-                                Create Zone
-                            </Button>
-                        </Space>
-                    </Form.Item>
-                </Form>
-            </Modal>
-
-            {/* Edit Zone  */}
-            <Modal
-                title={<Title level={4} className="text-center mb-6">Edit Zone</Title>}
-                open={isEditModalOpen}
-                onCancel={handleEditCancel}
-                footer={null}
-                destroyOnClose
-                width={600}
-                className="rounded-lg"
-            >
-                <Form
-                    form={editForm}
-                    layout="vertical"
-                    name="edit_zone_form"
-                    onFinish={handleEditSubmit}
-                >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                        <Form.Item
-                            label={<Text strong>Zone Name</Text>}
-                            name="name"
-                            rules={[
-                                { required: true, message: 'Zone name is required.' },
-                                { min: 3, message: 'Zone name must be at least 3 characters.' }
-                            ]}
-                            className="mb-4 md:col-span-2"
-                        >
-                            <Input placeholder="Enter zone name" className="rounded-md" />
-                        </Form.Item>
-
-                        <Form.Item name="warehouseId" hidden>
-                            <Input />
-                        </Form.Item>
-
-                        <Form.Item
-                            label={<Text strong>Min Storage Temperature (°C)</Text>}
-                            name="storageTemperatureMin"
-                            rules={[
-                                { required: true, message: 'Min temperature is required.' },
-                                {
-                                    validator: (_, value) => {
-                                        if (value === null || value === undefined) {
-                                            return Promise.resolve();
-                                        }
-                                        if (typeof value !== 'number' || isNaN(value)) {
-                                            return Promise.reject(new Error('Please enter a valid number.'));
-                                        }
-                                        if (value < -100) return Promise.reject(new Error('Min temperature cannot be less than -100°C.'));
-                                        if (value > 100) return Promise.reject(new Error('Min temperature cannot be greater than 100°C.'));
-                                        return Promise.resolve();
-                                    },
-                                },
-                            ]}
-                            className="mb-4"
-                        >
-                            <InputNumber
-                                min={-100}
-                                max={100}
-                                style={{ width: '100%' }}
-                                placeholder="Enter min temperature"
-                                className="rounded-md"
-                                parser={value => value === '' ? null : Number(value)}
-                                formatter={value => `${value}`}
-                                onChange={() => editForm.validateFields(['storageTemperatureMax'])}
-                            />
-                        </Form.Item>
-
-                        <Form.Item
-                            label={<Text strong>Max Storage Temperature (°C)</Text>}
-                            name="storageTemperatureMax"
-                            rules={[
-                                { required: true, message: 'Max temperature is required.' },
-                                {
-                                    validator: (_, value) => {
-                                        if (value === null || value === undefined) {
-                                            return Promise.resolve();
-                                        }
-                                        if (typeof value !== 'number' || isNaN(value)) {
-                                            return Promise.reject(new Error('Please enter a valid number.'));
-                                        }
-                                        if (value < -100) return Promise.reject(new Error('Max temperature cannot be less than -100°C.'));
-                                        if (value > 100) return Promise.reject(new Error('Max temperature cannot be greater than 100°C.'));
-
-                                        const minVal = editForm.getFieldValue('storageTemperatureMin');
-                                        if (typeof minVal === 'number' && !isNaN(minVal) && value <= minVal) {
-                                            return Promise.reject(new Error('Max temperature must be strictly greater than min temperature.'));
-                                        }
-                                        return Promise.resolve();
-                                    },
-                                },
-                            ]}
-                            className="mb-4"
-                        >
-                            <InputNumber
-                                min={-100}
-                                max={100}
-                                style={{ width: '100%' }}
-                                placeholder="Enter max temperature"
-                                className="rounded-md"
-                                parser={value => value === '' ? null : Number(value)}
-                                formatter={value => `${value}`}
-                                onChange={() => editForm.validateFields(['storageTemperatureMin'])}
-                            />
-                        </Form.Item>
-
-                        <Form.Item
-                            label={<Text strong>Total Capacity</Text>}
-                            name="totalCapacity"
-                            rules={[
-                                { required: true, message: 'Total capacity is required.' },
-                                {
-                                    type: 'number',
-                                    min: 0,
-                                    message: 'Please enter a non-negative number.',
-                                    transform: (value) => value === '' ? null : Number(value)
-                                },
-                                // eslint-disable-next-line no-unused-vars
-                                ({ getFieldValue }) => ({
-                                    validator(_, value) {
-                                        if (value === null || value === undefined || isNaN(value) || typeof value !== 'number') {
-                                            return Promise.resolve();
-                                        }
-                                        if (value <= 0) {
-                                            return Promise.reject(new Error('Capacity must be a positive number (greater than 0).'));
-                                        }
-
-                                        if (currentWarehouseTotalCapacity === 0 && !loading) {
-                                            return Promise.reject(new Error("Unable to verify warehouse capacity. Please refresh the page and try again."));
-                                        }
-
-                                        const capacityOfCurrentZoneBeforeEdit = currentZone?.totalCapacity || 0;
-                                        const totalCapacityOfOtherZones = allZonesTotalCapacity - capacityOfCurrentZoneBeforeEdit;
-
-                                        const remainingWarehouseCapacityForThisZone = currentWarehouseTotalCapacity - totalCapacityOfOtherZones;
-
-                                        if (value > remainingWarehouseCapacityForThisZone) {
-                                            return Promise.reject(new Error(`Zone capacity (${value}) cannot exceed available capacity (${remainingWarehouseCapacityForThisZone}).`));
-                                        }
-                                        return Promise.resolve();
-                                    },
-                                }),
-                            ]}
-                            className="col-span-2 mb-6"
-                        >
-                            <InputNumber
-                                min={0}
-                                style={{ width: '100%' }}
-                                placeholder="Enter total capacity"
-                                className="rounded-md"
-                                parser={value => value === '' ? null : Number(value)}
-                                formatter={value => `${value}`}
-                            />
-                        </Form.Item>
-                    </div>
-
-                    <Form.Item className="flex justify-end mt-4">
-                        <Space>
-                            <Button onClick={handleEditCancel} className="rounded-md">Cancel</Button>
-                            <Button type="primary" htmlType="submit" loading={loading} className="rounded-md">
-                                Save Changes
-                            </Button>
-                        </Space>
-                    </Form.Item>
-                </Form>
-            </Modal>
-
-<ModalDetailZone isViewGoodsModalOpen={isViewGoodsModalOpen} handleViewGoodsCancel={handleViewGoodsCancel} currentZone={currentZone} goodsSearchTerm={goodsSearchTerm} setGoodsSearchTerm={setGoodsSearchTerm} filteredGoods={filteredGoods} goodsColumns={goodsColumns} />
-            {/* View Goods in Zone Modal */}
-   
         </div>
     );
 };

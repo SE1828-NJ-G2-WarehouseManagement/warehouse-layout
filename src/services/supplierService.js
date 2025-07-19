@@ -6,9 +6,12 @@ class SupplierService {
         this.url = "/suppliers";
     }
 
-    getSuppliersByApprove = async () => {
+    getSuppliersByApprove = async (dataParams) => {
         try {
-            const response = await axiosInstance.get(this.url);
+            const response = await axiosInstance.get(`${this.url}/filter`, {
+                params: dataParams,
+                requiresAuth: true
+            });
             return response.data.data;
         } catch (error) {
             console.error("Error in SupplierService.getSuppliers:", error);
@@ -17,13 +20,12 @@ class SupplierService {
         }
     };
 
-    getAllSuppliers = async (page = 1, pageSize = 10) => {
+    getAllSuppliers = async (params = {}) => { 
         try {
-            const response = await axiosInstance.get(`${this.url}/all`, {
-                params: { page, pageSize },
+            const response = await axiosInstance.get(`${this.url}/filter`, {
+                params: params, 
                 requiresAuth: true,
             });
-
             return response.data;
         } catch (error) {
             console.error("Error in SupplierService.getAllSuppliers:", error);

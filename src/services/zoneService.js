@@ -5,19 +5,24 @@ class ZoneService {
         this.url = "/zones";
     }
 
-    async getAllZones(page = 1, pageSize = 10) {
+    async getAllZones(dataParams) {
         try {
             const response = await axiosInstance.get(`${this.url}`, {
-                params: { page, pageSize },
+                params: dataParams,
                 requiresAuth: true
             });
+
             return response.data;
         } catch (error) {
             console.error("Error in ZoneService.getAllZones:", error);
-            const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred while fetching zones. Please check network connectivity and backend server.";
+            const errorMessage =
+                error.response?.data?.message ||
+                error.message ||
+                "An unknown error occurred while fetching zones. Please check network connectivity and backend server.";
             throw new Error(errorMessage);
         }
     }
+
 
     async getAllZonesNonPaginated() {
         try {
@@ -37,7 +42,7 @@ class ZoneService {
             const response = await axiosInstance.get(`${this.url}/total-capacity`, {
                 requiresAuth: true
             });
-            return response.data; 
+            return response.data;
         } catch (error) {
             console.error("Error in ZoneService.getTotalZonesCapacity:", error);
             const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred while fetching total zones capacity.";
@@ -79,7 +84,7 @@ class ZoneService {
 
     async updateZone(zoneId, updatedData) {
         try {
-            const response = await axiosInstance.put(`${this.url}/${zoneId}`, updatedData, {    
+            const response = await axiosInstance.put(`${this.url}/${zoneId}`, updatedData, {
                 requiresAuth: true
             });
             console.log("Form validation successful!", response.data);

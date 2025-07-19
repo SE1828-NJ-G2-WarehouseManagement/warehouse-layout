@@ -10,12 +10,19 @@ const ZoneProvider = ({ children }) => {
     const [pageIndex, setPageIndex] = useState(1);
     const [totalItem, setTotalItem] = useState(0);
     const [allZonesTotalCapacity, setAllZonesTotalCapacity] = useState(0); 
-
+    const [pageSize, setPageSize] = useState(10);
+    const [dataParams, setDataParams] = useState({
+        page: 1,
+        size: 10,
+        type: "",
+        status: "",
+        name: ""
+    });
     const zoneService = new ZoneService();
 
     useEffect(() => {
-        fetchZones(pageIndex);
-    }, [pageIndex]);
+        fetchZones(dataParams);
+    }, [dataParams]);
 
     const fetchZones = async (page) => {
         setLoading(true);
@@ -89,7 +96,7 @@ const ZoneProvider = ({ children }) => {
     };
 
     return (
-        <ZoneContext.Provider value={{ zones, loading, fetchZones, createZone, updateZone, pageIndex, setPageIndex, totalItem, allZonesTotalCapacity, changeZoneStatus }}>
+        <ZoneContext.Provider value={{ zones, loading, fetchZones, createZone, updateZone, pageIndex, setPageIndex, totalItem, allZonesTotalCapacity, changeZoneStatus, setPageSize, pageSize, setDataParams,dataParams }}>
             {children}
         </ZoneContext.Provider>
     );
