@@ -82,7 +82,6 @@ class CategoryService {
         `${this.url}/reject/${categoryId}`,
         { userId, note },
         {
-          // GỬI reason
           requiresAuth: true,
         }
       );
