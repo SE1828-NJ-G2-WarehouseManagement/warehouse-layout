@@ -17,6 +17,7 @@ import SupplierList from './pages/warehouseStaff/SupplierList';
 import CategoryList from './pages/warehouseStaff/CategoryList';
 import CustomerList from './pages/warehouseStaff/CustomerList';
 import ProductList from './pages/warehouseStaff/ProductList';
+import ImportHistory from './pages/warehouseStaff/ImportHistory'; 
 
 import { useAuth } from '../hooks/useAuth';
 import Profile from './common/Profile';
@@ -138,6 +139,7 @@ const StaffMainLayout = () => {
             <Route path="products" element={<ProductList />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="historyImport" element={<ImportHistory />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
         </main>
