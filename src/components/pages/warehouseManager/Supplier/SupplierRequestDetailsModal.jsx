@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Modal, Card, Button, Space, Typography, Tag,
-  Descriptions, Divider, Popconfirm, Spin
+  Descriptions, Divider, Popconfirm, Spin, Flex
 } from 'antd';
 import {
   CheckCircleOutlined, CloseCircleOutlined, ArrowRightOutlined
@@ -12,7 +12,7 @@ const { Title, Text } = Typography;
 
 const SupplierRequestDetailsModal = ({
   visible,
-  currentRequest, 
+  currentRequest,
   onCancel,
   onApprove,
   onShowRejectModal,
@@ -38,8 +38,26 @@ const SupplierRequestDetailsModal = ({
 
   if (!currentRequest) return null;
 
-  const createdByDisplayName = currentRequest.submittedBy; 
+  const getStatusTag = (status) => {
+    let color = 'default';
+    if (status === 'PENDING') color = 'gold';
+    if (status === 'APPROVED') color = 'green';
+    if (status === 'REJECTED') color = 'red';
+    if (status === 'ACTIVE') color = 'blue';
+    if (status === 'INACTIVE') color = 'volcano';
+    return <Tag color={color}>{status ? status?.toUpperCase() : 'N/A'}</Tag>;
+  };
 
+  const getRequestTypeTag = (type) => {
+    let color = 'blue';
+    if (type === 'UPDATE') color = 'orange';
+    if (type === 'STATUS CHANGE') color = 'purple';
+    if (type === 'CREATE') color = 'green';
+    return <Tag color={color}>{type ? type.toUpperCase() : 'N/A'}</Tag>;
+  };
+
+  const createdByDisplayName = currentRequest.submittedBy;
+  console.log("currentRequest", currentRequest)
   return (
     <Modal
       title={<Title level={4} className="text-center mb-6">Review Supplier Request</Title>}
@@ -56,79 +74,104 @@ const SupplierRequestDetailsModal = ({
           <Card className="mb-6 shadow-sm border border-gray-100 p-6 rounded-lg">
             <Title level={5} className="mb-4">Request Details</Title>
             <Descriptions column={2} bordered size="small" className="ant-descriptions-condensed">
-              {/* <Descriptions.Item label={<Text strong>Request ID</Text>}>{currentRequest?.id}</Descriptions.Item> */}
-              <Descriptions.Item label={<Text strong>Supplier Name</Text>}>{currentRequest.supplierDetails.name}</Descriptions.Item>
+              <Descriptions.Item label={<Text strong>Request ID</Text>}>{currentRequest?.id || 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label={<Text strong>Supplier Name</Text>}>
+                {currentRequest.type === 'UPDATE' ?
+                  currentRequest.supplierDetails.new.name :
+                  currentRequest.supplierDetails.name}
+              </Descriptions.Item>
               <Descriptions.Item label={<Text strong>Submitted By</Text>}>{createdByDisplayName}</Descriptions.Item>
               <Descriptions.Item label={<Text strong>Request Type</Text>}>
-                <Tag color={
-                  currentRequest.type === 'Create' ? 'blue' :
-                  currentRequest.type === 'Update' ? 'orange' : 'purple'
-                }>
-                  {currentRequest.type.toUpperCase()}
-                </Tag>
+                {getRequestTypeTag(currentRequest.type)}
               </Descriptions.Item>
               <Descriptions.Item label={<Text strong>Date Submitted</Text>}>
                 {dayjs(currentRequest.dateSubmitted).format('DD/MM/YYYY')}
               </Descriptions.Item>
               <Descriptions.Item label={<Text strong>Current Status</Text>} span={2}>
-                <Tag color={
-                  currentRequest.status === 'PENDING' ? 'gold' :
-                  currentRequest.status === 'APPROVED' ? 'green' : 'red'
-                }>
-                  {currentRequest.status.toUpperCase()}
-                </Tag>
+                {getStatusTag(currentRequest.status)}
               </Descriptions.Item>
+              {currentRequest.status === 'REJECTED' && currentRequest.rejectionReason && (
+                <Descriptions.Item label={<Text strong className="text-red-700">Rejection Reason</Text>} span={2}>
+                  <Text type="danger">{currentRequest.rejectionReason}</Text>
+                </Descriptions.Item>
+              )}
             </Descriptions>
           </Card>
 
           <Divider orientation="left" className="my-6">Supplier Information</Divider>
           <div className="mt-4">
-            {currentRequest.type === 'Create' && (
+            {currentRequest.type === 'CREATE' && currentRequest.supplierDetails && (
               <Card className="shadow-sm border border-gray-100 p-6 rounded-lg">
                 <Title level={5} className="mb-4">New Supplier Details</Title>
                 <Descriptions column={2} bordered size="small" className="ant-descriptions-condensed">
                   <Descriptions.Item label={<Text strong>Name</Text>}>{currentRequest.supplierDetails.name}</Descriptions.Item>
-                  <Descriptions.Item label={<Text strong>Tax ID</Text>}>{currentRequest.supplierDetails.taxId}</Descriptions.Item>
                   <Descriptions.Item label={<Text strong>Email</Text>}>{currentRequest.supplierDetails.email}</Descriptions.Item>
                   <Descriptions.Item label={<Text strong>Phone</Text>}>{currentRequest.supplierDetails.phone}</Descriptions.Item>
                   <Descriptions.Item label={<Text strong>Address</Text>} span={2}>{currentRequest.supplierDetails.address}</Descriptions.Item>
+                  <Descriptions.Item label={<Text strong>Tax ID</Text>}>{currentRequest.supplierDetails.taxId}</Descriptions.Item>
                 </Descriptions>
               </Card>
             )}
-            {(currentRequest.type === 'Update' || currentRequest.type === 'Status Change') && (
+
+            {currentRequest.type === 'UPDATE' && currentRequest.supplierDetails && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card
+                  title={<Title level={5} className="text-red-600 mb-0">Old Data</Title>}
+                  className="shadow-sm border border-red-200 p-4 rounded-lg"
+                >
+                  <Descriptions labelStyle={{ width: 100 }} column={1} bordered size="small" className="ant-descriptions-condensed">
+                    <Descriptions.Item label={<Text strong>Name</Text>}>{currentRequest.supplierDetails.old.name}</Descriptions.Item>
+                    <Descriptions.Item label={<Text strong>Email</Text>}>{currentRequest.supplierDetails.old.email}</Descriptions.Item>
+                    <Descriptions.Item label={<Text strong>Phone</Text>}>{currentRequest.supplierDetails.old.phone}</Descriptions.Item>
+                    <Descriptions.Item label={<Text strong>Address</Text>}>{currentRequest.supplierDetails.old.address}</Descriptions.Item>
+                    <Descriptions.Item label={<Text strong>Tax ID</Text>}>{currentRequest.supplierDetails.old.taxId}</Descriptions.Item>
+                  </Descriptions>
+                </Card>
+                <Card
+                  title={<Title level={5} className="text-green-600 mb-0">New Data</Title>}
+                  className="shadow-sm border border-green-200 p-4 rounded-lg"
+                >
+                  <Descriptions labelStyle={{ width: 100 }} column={1} bordered size="small" className="ant-descriptions-condensed">
+                    <Descriptions.Item label={<Text strong>Name</Text>}>{currentRequest.supplierDetails.new.name}</Descriptions.Item>
+                    <Descriptions.Item label={<Text strong>Email</Text>}>{currentRequest.supplierDetails.new.email}</Descriptions.Item>
+                    <Descriptions.Item label={<Text strong>Phone</Text>}>{currentRequest.supplierDetails.new.phone}</Descriptions.Item>
+                    <Descriptions.Item label={<Text strong>Address</Text>}>{currentRequest.supplierDetails.new.address}</Descriptions.Item>
+                    <Descriptions.Item label={<Text strong>Tax ID</Text>}>{currentRequest.supplierDetails.new.taxId}</Descriptions.Item>
+                  </Descriptions>
+                </Card>
+              </div>
+
+            )}
+
+            {currentRequest.type === 'STATUS_CHANGE' && currentRequest.supplierDetails && (
               <Card className="shadow-sm border border-gray-100 p-6 rounded-lg">
-                <Title level={5} className="mb-4">Supplier Details</Title>
-                <Descriptions column={2} bordered size="small" className="ant-descriptions-condensed">
-                  <Descriptions.Item label={<Text strong>Name</Text>}>{currentRequest.supplierDetails.name}</Descriptions.Item>
-                  <Descriptions.Item label={<Text strong>Tax ID</Text>}>{currentRequest.supplierDetails.taxId}</Descriptions.Item>
-                  <Descriptions.Item label={<Text strong>Contact Person</Text>}>{currentRequest.supplierDetails.contactPerson || 'N/A'}</Descriptions.Item>
-                  <Descriptions.Item label={<Text strong>Email</Text>}>{currentRequest.supplierDetails.email}</Descriptions.Item>
-                  <Descriptions.Item label={<Text strong>Phone</Text>}>{currentRequest.supplierDetails.phone}</Descriptions.Item>
-                  <Descriptions.Item label={<Text strong>Address</Text>} span={2}>{currentRequest.supplierDetails.address}</Descriptions.Item>
-                  <Descriptions.Item label={<Text strong>Products</Text>} span={2}>{currentRequest.supplierDetails.products?.join(', ') || 'N/A'}</Descriptions.Item>
-                  {currentRequest.type === 'Status Change' && (
-                    <>
-                      <Descriptions.Item label={<Text strong>Old Status</Text>}>
-                          <Tag color={currentRequest.supplierDetails.previousStatus === 'ACTIVE' ? 'green' : 'red'}> {/* Sử dụng previousStatus từ API, nếu có */}
-                            {currentRequest.supplierDetails.previousStatus || 'N/A'}
-                          </Tag>
-                      </Descriptions.Item>
-                      <Descriptions.Item label={<Text strong>New Status</Text>}>
-                          <Tag color={currentRequest.supplierDetails.action === 'ACTIVE' ? 'green' : 'red'}> {/* Sử dụng action từ API, nếu có */}
-                            {currentRequest.supplierDetails.action || 'N/A'}
-                          </Tag>
-                      </Descriptions.Item>
-                    </>
-                  )}
+                <Title level={5} className="mb-4">Status Change Details</Title>
+                <Descriptions column={1} bordered size="small" className="ant-descriptions-condensed">
+                  <Descriptions.Item label={<Text strong>Supplier Name</Text>}>
+                    {currentRequest.supplierDetails.name || 'N/A'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={<Text strong>Transition</Text>}>
+                    <Space>
+                      <Tag color={currentRequest.supplierDetails?.oldStatus === 'ACTIVE' ? 'green' : 'red'}>
+                        {currentRequest.supplierDetails?.oldStatus?.toUpperCase()}
+                      </Tag>
+                      <ArrowRightOutlined style={{ color: '#999' }} />
+                      <Tag color={currentRequest.supplierDetails?.newStatus === 'ACTIVE' ? 'green' : 'red'}>
+                        {currentRequest.supplierDetails?.newStatus?.toUpperCase()}
+                      </Tag>
+                    </Space>
+                  </Descriptions.Item>
                 </Descriptions>
-                {currentRequest.status === 'Rejected' && currentRequest.rejectionReason && (
-                  <Card className="mt-6 p-4 bg-red-50 border border-red-300 rounded-lg">
-                    <Text strong className="text-red-700">Rejection Reason:</Text> {currentRequest.rejectionReason}
-                  </Card>
-                )}
+
               </Card>
             )}
-            
+
+            {currentRequest.status === 'REJECTED' && currentRequest.rejectionReason && (
+              <Card className="mt-6 p-4 bg-red-100 border border-red-400 rounded-lg">
+                <Title level={5} className="text-red-700 mb-2">Rejection Reason</Title>
+                <Text className="text-red-800 text-base">{currentRequest.rejectionReason}</Text>
+              </Card>
+            )}
           </div>
         </div>
 
@@ -145,7 +188,7 @@ const SupplierRequestDetailsModal = ({
                 Approve
               </Button>
             </Popconfirm>
-            <Button danger icon={<CloseCircleOutlined />} onClick={onShowRejectModal} className="rounded-md">
+            <Button danger icon={<CloseCircleOutlined />} onClick={() => onShowRejectModal(currentRequest)} className="rounded-md">
               Reject
             </Button>
           </div>
