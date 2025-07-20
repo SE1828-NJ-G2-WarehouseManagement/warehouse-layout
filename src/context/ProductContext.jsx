@@ -42,7 +42,8 @@ const updateProduct = async (productData) => {
   const changeProductStatus = async (productId, action) => {
     return await productService.changeProductStatus(productId, action);
   };
-
+const approveProduct = (id) => productService.approveProduct(id);
+const rejectProduct = (id, note) => productService.rejectProduct(id, note);
   useEffect(() => {
     fetchAllProducts(params);
   }, [fetchAllProducts, params]);
@@ -59,6 +60,8 @@ const updateProduct = async (productData) => {
         updateProduct,
         getProductById,
         changeProductStatus,
+        approveProduct,
+        rejectProduct,
       }}
     >
       {children}

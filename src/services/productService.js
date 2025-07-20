@@ -88,6 +88,30 @@ class ProductService {
       throw error;
     }
   }
+  async approveProduct(productId) {
+    try {
+      const response = await axiosInstance.put(
+        `/products/approve/${productId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error in ProductService.approveProduct:", error);
+      throw error;
+    }
+  }
+
+  async rejectProduct(productId, note) {
+    try {
+      const response = await axiosInstance.put(
+        `/products/reject/${productId}`,
+        { note }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error in ProductService.rejectProduct:", error);
+      throw error;
+    }
+  }
 }
 
 
