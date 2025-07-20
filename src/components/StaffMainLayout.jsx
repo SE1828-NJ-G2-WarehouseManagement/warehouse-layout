@@ -17,6 +17,8 @@ import SupplierList from './pages/warehouseStaff/SupplierList';
 import CategoryList from './pages/warehouseStaff/CategoryList';
 import CustomerList from './pages/warehouseStaff/CustomerList';
 import ProductList from './pages/warehouseStaff/ProductList';
+import ImportHistory from './pages/warehouseStaff/ImportHistory'; 
+import { ProductProvider } from "../context/ProductContext";
 
 import { useAuth } from '../hooks/useAuth';
 import Profile from './common/Profile';
@@ -92,19 +94,19 @@ const StaffMainLayout = () => {
           setSelectedKey(key);
           // Logic điều hướng khi click sidebar
           const keyToPath = {
-            dashboard: '/dashboard',
-            zone: '/zoneList',
-            import: '/importTransaction',
-            export: '/exportTransaction',
-            expired: '/expiredProductsList',
-            transferZone: '/internalZoneTransfer',
-            transferWarehouse: '/internalWarehouseTransfer',
-            supplier: '/suppliers',
-            category: '/categories',
-            customer: '/customers',
-            product: '/products',
-            profile: '/profile',
-            settings: '/settings',
+            dashboard: "/dashboard",
+            zone: "/zoneList",
+            import: "/importTransaction",
+            export: "/exportTransaction",
+            expired: "/expiredProductsList",
+            transferZone: "/internalZoneTransfer",
+            transferWarehouse: "/internalWarehouseTransfer",
+            supplier: "/suppliers",
+            category: "/categories",
+            customer: "/customers",
+            product: "/products",
+            profile: "/profile",
+            settings: "/settings",
           };
           if (keyToPath[key]) {
             navigate(keyToPath[key]);
@@ -127,17 +129,34 @@ const StaffMainLayout = () => {
             <Route path="dashboard" element={<StaffDashboard />} />
             <Route path="importTransaction" element={<ImportTransaction />} />
             <Route path="exportTransaction" element={<ExportTransaction />} />
-            <Route path="expiredProductsList" element={<ExpiredProductsList />} />
+            <Route
+              path="expiredProductsList"
+              element={<ExpiredProductsList />}
+            />
             <Route path="zoneList" element={<ZoneList />} />
             <Route path="zone/:zoneId" element={<ZoneProduct />} />
-            <Route path="internalZoneTransfer" element={<InternalZoneTransfer />} />
-            <Route path="internalWarehouseTransfer" element={<InternalWarehouseTransfer />} />
+            <Route
+              path="internalZoneTransfer"
+              element={<InternalZoneTransfer />}
+            />
+            <Route
+              path="internalWarehouseTransfer"
+              element={<InternalWarehouseTransfer />}
+            />
             <Route path="suppliers" element={<SupplierList />} />
             <Route path="categories" element={<CategoryList />} />
             <Route path="customers" element={<CustomerList />} />
-            <Route path="products" element={<ProductList />} />
+            <Route
+              path="products"
+              element={
+                <ProductProvider>
+                  <ProductList />
+                </ProductProvider>
+              }
+            />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="historyImport" element={<ImportHistory />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
         </main>

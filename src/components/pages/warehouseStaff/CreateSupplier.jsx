@@ -56,13 +56,32 @@ const CreateSupplier = ({ onClose, onSubmit }) => {
     setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (validateForm()) {
-      onSubmit(formData); // Pass all form data
-      onClose(); // Close the modal
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (validateForm()) {
+    try {
+      await onSubmit(formData); // Gọi API từ cha (SupplierList)
+      onClose(); // Chỉ đóng modal nếu thành công
+    } catch (err) {
+      const message =
+        err?.response?.data?.message || err.message || "Unknown error";
+
+      // Mapping lỗi vào đúng field
+      if (message.toLowerCase().includes("name")) {
+        setErrors((prev) => ({ ...prev, name: message }));
+      } else if (message.toLowerCase().includes("phone")) {
+        setErrors((prev) => ({ ...prev, phone: message }));
+      } else if (message.toLowerCase().includes("email")) {
+        setErrors((prev) => ({ ...prev, email: message }));
+      } else if (message.toLowerCase().includes("tax id")) {
+        setErrors((prev) => ({ ...prev, taxId: message }));
+      } else {
+        setErrors((prev) => ({ ...prev, general: message })); // fallback nếu không khớp field nào
+      }
     }
-  };
+  }
+};
+
 
   return (
     // Adjusted opacity from bg-opacity-40 to bg-opacity-30 for a lighter overlay

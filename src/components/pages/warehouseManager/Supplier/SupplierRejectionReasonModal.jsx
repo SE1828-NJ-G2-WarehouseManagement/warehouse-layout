@@ -9,31 +9,31 @@ const SupplierRejectionReasonModal = ({
   onCancel,
   onSubmit,
   loading,
-  form // Truyền form instance từ cha để có thể resetFields
+  form
 }) => {
   return (
     <Modal
       title={<Title level={4} className="text-center mb-6">Enter Rejection Reason</Title>}
-      open={visible} // Sử dụng 'open' thay vì 'visible'
+      open={visible}
       onCancel={onCancel}
-      footer={null} // Không có footer mặc định
-      destroyOnClose // Hủy component khi đóng để reset form
+      footer={null}
+      destroyOnClose
       width={500}
       className="rounded-lg"
       centered
     >
       <Form
-        form={form} // Gán form instance từ component cha
+        form={form}
         layout="vertical"
         name="rejection_reason_form"
-        onFinish={onSubmit} // Gọi hàm onSubmit khi form được submit
+        onFinish={onSubmit}
       >
         <Form.Item
           label={<Text strong>Reason for Rejection</Text>}
           name="reason"
           rules={[
             { required: true, message: 'Please enter a reason for rejection.' },
-            { min: 10, message: 'Reason must be at least 10 characters.' } // BR58
+            { min: 10, message: 'Reason must be at least 10 characters.' }
           ]}
         >
           <Input.TextArea rows={4} placeholder="Enter reason for rejecting this request (min 10 characters)" className="rounded-md" />

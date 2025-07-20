@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import axiosInstance from '../../../config/axios';
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import axiosInstance from "../../../config/axios";
 import {
   FilePlus,
   CircleCheck,
@@ -11,123 +11,136 @@ import {
   Trash2,
   ShoppingCart,
   Weight,
-  Thermometer, // Added for temperature icon
-} from 'lucide-react';
+  Thermometer,
+  Eye,
+  Link,
+} from "lucide-react";
+import { Button } from "antd";
+import { useNavigate } from "react-router-dom";
 
 const ImportTransaction = () => {
+  const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState([]);
   const [zones, setZones] = useState([]);
   const [productsList, setProductsList] = useState([]);
-  const [supplierId, setSupplierId] = useState('');
-  const [zoneId, setZoneId] = useState('');
-  const [products, setProducts] = useState([{ productId: '', quantity: '', expiryDate: '', density: 0, name: '' }]);
-  const [messages, setMessages] = useState({ type: '', text: '' });
+  const [supplierId, setSupplierId] = useState("");
+  const [zoneId, setZoneId] = useState("");
+  const [products, setProducts] = useState([
+    {
+      productId: "",
+      quantity: "",
+      weights: "", // Total weight in kg (user input)
+      expiryDate: "",
+      density: 0, // Auto-filled from product
+      name: "",
+      storageTemperature: null,
+    },
+  ]);
+  const [messages, setMessages] = useState({ type: "", text: "" });
   const [errors, setErrors] = useState({});
   const [selectedZone, setSelectedZone] = useState(null);
   const [date] = useState(new Date().toISOString().slice(0, 10));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- Searchable Dropdown States ---
-  const [supplierSearchTerm, setSupplierSearchTerm] = useState('');
+  // Searchable Dropdown States
+  const [supplierSearchTerm, setSupplierSearchTerm] = useState("");
   const [isSupplierDropdownOpen, setIsSupplierDropdownOpen] = useState(false);
   const supplierDropdownRef = useRef(null);
 
-  const [zoneSearchTerm, setZoneSearchTerm] = useState('');
+  const [zoneSearchTerm, setZoneSearchTerm] = useState("");
   const [isZoneDropdownOpen, setIsZoneDropdownOpen] = useState(false);
   const zoneDropdownRef = useRef(null);
 
-  // States for product search (per row)
-  const [productSearchTerms, setProductSearchTerms] = useState({}); 
-  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState({}); 
-  const productDropdownRefs = useRef({}); 
+  const [productSearchTerms, setProductSearchTerms] = useState({});
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState({});
+  const productDropdownRefs = useRef({});
 
-  // Fetch suppliers and products on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [supRes, prodRes] = await Promise.all([
-          axiosInstance.get('/suppliers/all-active'),
-          axiosInstance.get('/products/active'),
+          axiosInstance.get("/suppliers/all-active"),
+          axiosInstance.get("/products/active"),
         ]);
         setSuppliers(supRes.data || []);
         setProductsList(prodRes.data || []);
       } catch (err) {
-        console.error('Error fetching data:', err);
-        setMessages({ type: 'error', text: 'Failed to load suppliers or products.' });
+        console.error("Error fetching data:", err);
+        setMessages({
+          type: "error",
+          text: "Failed to load suppliers or products.",
+        });
       }
     };
     fetchData();
   }, []);
 
-  // Fetch zones on component mount
   useEffect(() => {
     const fetchZones = async () => {
       try {
-        const res = await axiosInstance.get('/zones/without-pagination');
+        const res = await axiosInstance.get("/zones/without-pagination");
         setZones(res.data || []);
       } catch (err) {
-        console.error('Error fetching zones:', err);
-        setMessages({ type: 'error', text: 'Failed to load zones.' });
+        console.error("Error fetching zones:", err);
+        setMessages({ type: "error", text: "Failed to load zones." });
       }
     };
     fetchZones();
   }, []);
 
-  // Update selected zone when zoneId changes
   useEffect(() => {
-    setSelectedZone(zones.find(z => z._id === zoneId) || null);
+    setSelectedZone(zones.find((z) => z._id === zoneId) || null);
   }, [zoneId, zones]);
 
-  // Create product map for efficient lookups
-  const productMap = useMemo(() =>
-    new Map(productsList.map(p => [p._id, p])),
+  const productMap = useMemo(
+    () => new Map(productsList.map((p) => [p._id, p])),
     [productsList]
   );
 
-  // Create supplier map for efficient lookups
-  const supplierMap = useMemo(() =>
-    new Map(suppliers.map(s => [s._id, s])),
+  const supplierMap = useMemo(
+    () => new Map(suppliers.map((s) => [s._id, s])),
     [suppliers]
   );
 
-  // --- Filtered lists for searchable dropdowns ---
-  const filteredSuppliers = useMemo(() =>
-    suppliers.filter(supplier =>
-      supplier.name.toLowerCase().includes(supplierSearchTerm.toLowerCase())
-    ),
+  const filteredSuppliers = useMemo(
+    () =>
+      suppliers.filter((supplier) =>
+        supplier.name.toLowerCase().includes(supplierSearchTerm.toLowerCase())
+      ),
     [suppliers, supplierSearchTerm]
   );
 
-  const filteredZones = useMemo(() =>
-    zones.filter(zone =>
-      zone.name.toLowerCase().includes(zoneSearchTerm.toLowerCase())
-    ),
+  const filteredZones = useMemo(
+    () =>
+      zones.filter((zone) =>
+        zone.name.toLowerCase().includes(zoneSearchTerm.toLowerCase())
+      ),
     [zones, zoneSearchTerm]
   );
 
-  // Handle product field changes
   const handleProductChange = (index, field, value) => {
     const updated = [...products];
-    if (field === 'productId') {
+
+    if (field === "productId") {
       const product = productMap.get(value);
       updated[index] = {
         ...updated[index],
         productId: value,
-        name: product?.name || '',
+        name: product?.name || "",
         density: product?.density || 0,
-        storageTemperature: product?.storageTemperature || null, // Capture storage temperature
+        storageTemperature: product?.storageTemperature || null,
       };
-      // Clear search term for this product row when selected
-      setProductSearchTerms(prev => ({ ...prev, [index]: product?.name || '' })); // Set the name as the search term
-      setIsProductDropdownOpen(prev => ({ ...prev, [index]: false }));
-    } else if (field === 'density') {
-      updated[index][field] = parseFloat(value) || 0;
+      setProductSearchTerms((prev) => ({
+        ...prev,
+        [index]: product?.name || "",
+      }));
+      setIsProductDropdownOpen((prev) => ({ ...prev, [index]: false }));
     } else {
       updated[index][field] = value;
     }
+
     setProducts(updated);
 
-    // Clear specific field errors when user starts typing
     if (errors.productErrors?.[index]?.[field]) {
       const newErrors = { ...errors };
       if (!newErrors.productErrors) newErrors.productErrors = [];
@@ -137,9 +150,19 @@ const ImportTransaction = () => {
     }
   };
 
-  // Add new product row
   const addProductRow = () => {
-    setProducts([...products, { productId: '', quantity: '', expiryDate: '', density: 0, name: '', storageTemperature: null }]);
+    setProducts([
+      ...products,
+      {
+        productId: "",
+        quantity: "",
+        weights: "",
+        expiryDate: "",
+        density: 0,
+        name: "",
+        storageTemperature: null,
+      },
+    ]);
     if (errors.products) {
       const newErrors = { ...errors };
       delete newErrors.products;
@@ -147,74 +170,81 @@ const ImportTransaction = () => {
     }
   };
 
-  // Remove product row
   const removeProductRow = (index) => {
     if (products.length <= 1) return;
     const updated = products.filter((_, i) => i !== index);
     setProducts(updated);
 
-    // Update errors array
-    setErrors(prev => {
+    setErrors((prev) => {
       const newErrors = { ...prev };
       if (newErrors.productErrors) {
-        newErrors.productErrors = newErrors.productErrors.filter((_, i) => i !== index);
+        newErrors.productErrors = newErrors.productErrors.filter(
+          (_, i) => i !== index
+        );
       }
       return newErrors;
     });
 
-    // Clean up search term and open state for removed row
-    setProductSearchTerms(prev => {
+    setProductSearchTerms((prev) => {
       const newTerms = { ...prev };
       delete newTerms[index];
       return newTerms;
     });
-    setIsProductDropdownOpen(prev => {
+    setIsProductDropdownOpen((prev) => {
       const newOpen = { ...prev };
       delete newOpen[index];
       return newOpen;
     });
   };
 
-  // Calculate total weight
-  const totalWeight = useMemo(() =>
-    products.reduce((sum, item) => {
-      const quantity = parseFloat(item.quantity) || 0;
+  // Calculate total volume: V = (weights / density) * quantity
+  const totalVolume = useMemo(() => {
+    return products.reduce((sum, item) => {
+      const weights = parseFloat(item.weights) || 0;
       const density = parseFloat(item.density) || 0;
-      return sum + (quantity * density);
-    }, 0),
-    [products]
-  );
+      const quantity = parseFloat(item.quantity) || 0;
 
-  // Clear general messages when user interacts with form
+      if (density <= 0) return sum;
+      return sum + (weights / density) * quantity;
+    }, 0);
+  }, [products]);
+
   const clearMessages = () => {
     if (messages.text) {
-      setMessages({ type: '', text: '' });
+      setMessages({ type: "", text: "" });
     }
   };
 
-  // --- Click outside handlers for dropdowns ---
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (supplierDropdownRef.current && !supplierDropdownRef.current.contains(event.target)) {
+      if (
+        supplierDropdownRef.current &&
+        !supplierDropdownRef.current.contains(event.target)
+      ) {
         setIsSupplierDropdownOpen(false);
       }
-      if (zoneDropdownRef.current && !zoneDropdownRef.current.contains(event.target)) {
+      if (
+        zoneDropdownRef.current &&
+        !zoneDropdownRef.current.contains(event.target)
+      ) {
         setIsZoneDropdownOpen(false);
       }
-      Object.keys(productDropdownRefs.current).forEach(index => {
-        if (productDropdownRefs.current[index] && !productDropdownRefs.current[index].contains(event.target)) {
-          setIsProductDropdownOpen(prev => ({ ...prev, [index]: false }));
+      Object.keys(productDropdownRefs.current).forEach((index) => {
+        if (
+          productDropdownRefs.current[index] &&
+          !productDropdownRefs.current[index].contains(event.target)
+        ) {
+          setIsProductDropdownOpen((prev) => ({ ...prev, [index]: false }));
         }
       });
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessages({});
@@ -223,45 +253,55 @@ const ImportTransaction = () => {
     let newErrors = {};
     let hasError = false;
 
-    // Validate supplier
     if (!supplierId) {
-      newErrors.supplierId = 'Please select a supplier.';
+      newErrors.supplierId = "Please select a supplier.";
       hasError = true;
     }
 
-    // Validate zone
     if (!zoneId) {
-      newErrors.zoneId = 'Please select a zone.';
+      newErrors.zoneId = "Please select a zone.";
       hasError = true;
     }
 
-    // Validate products
-    const productErrors = products.map(product => {
+    const productErrors = products.map((product) => {
       const productError = {};
 
       if (!product.productId) {
-        productError.productId = 'Select product.';
+        productError.productId = "Select product.";
       }
 
-      if (!product.quantity || isNaN(parseFloat(product.quantity)) || parseFloat(product.quantity) <= 0) {
-        productError.quantity = 'Invalid quantity.';
+      if (
+        !product.quantity ||
+        isNaN(parseFloat(product.quantity)) ||
+        parseFloat(product.quantity) <= 0
+      ) {
+        productError.quantity = "Invalid quantity.";
       }
 
-      // Validate density
-      if (isNaN(parseFloat(product.density)) || parseFloat(product.density) <= 0) {
-        productError.density = 'Invalid weight.';
+      if (
+        !product.weights ||
+        isNaN(parseFloat(product.weights)) ||
+        parseFloat(product.weights) <= 0
+      ) {
+        productError.weights = "Invalid weights.";
+      }
+
+      if (
+        isNaN(parseFloat(product.density)) ||
+        parseFloat(product.density) <= 0
+      ) {
+        productError.density = "Invalid density.";
       }
 
       if (!product.expiryDate) {
-        productError.expiryDate = 'Required.';
+        productError.expiryDate = "Required.";
       } else {
-        // Validate expiry date is not in the past
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const expiry = new Date(product.expiryDate);
         expiry.setHours(0, 0, 0, 0);
         if (expiry <= today) {
-          productError.expiryDate = 'Expiry date cannot be in the past.';
+          productError.expiryDate = "Expiry date cannot be in the past.";
         }
       }
 
@@ -272,92 +312,109 @@ const ImportTransaction = () => {
       return productError;
     });
 
-    // Check if at least one product is added
     if (products.length === 0) {
-      newErrors.products = 'Add at least 1 product.';
+      newErrors.products = "Add at least 1 product.";
       hasError = true;
     }
 
-    // Check zone capacity
-    if (selectedZone && totalWeight > 0) {
+    // Check zone capacity using volume
+    if (selectedZone && totalVolume > 0) {
       const currentLoad = parseFloat(selectedZone.currentCapacity) || 0;
       const totalCapacity = parseFloat(selectedZone.totalCapacity) || 0;
       const remainingCapacity = totalCapacity - currentLoad;
 
-      if (totalWeight > remainingCapacity) {
-        newErrors.weightCapacity = `Exceeds zone capacity. Available: ${remainingCapacity.toFixed(2)} kg, Required: ${totalWeight.toFixed(2)} kg`;
+      if (totalVolume > remainingCapacity) {
+        newErrors.volumeCapacity = `Exceeds zone capacity. Available: ${remainingCapacity.toFixed(
+          2
+        )} m³, Required: ${totalVolume.toFixed(2)} m³`;
         hasError = true;
       }
     }
 
     // Validate Zone Temperature Compatibility
     if (selectedZone) {
-      const productsTemperatureIssues = products.filter(p => {
+      const productsTemperatureIssues = products.filter((p) => {
         const productInfo = productMap.get(p.productId);
-        if (productInfo && productInfo.storageTemperature && selectedZone.storageTemperature) {
+        if (
+          productInfo &&
+          productInfo.storageTemperature &&
+          selectedZone.storageTemperature
+        ) {
           const zoneMin = selectedZone.storageTemperature.min;
           const zoneMax = selectedZone.storageTemperature.max;
           const productMin = productInfo.storageTemperature.min;
           const productMax = productInfo.storageTemperature.max;
 
-          return !(productMin >= zoneMin && productMax <= zoneMax);
+          return !(zoneMin >= productMin && zoneMax <= productMax);
         }
         return false;
       });
 
       if (productsTemperatureIssues.length > 0) {
-        newErrors.zoneCompatibility = 'Some products have temperature requirements incompatible with the selected zone.';
+        newErrors.zoneCompatibility =
+          "Some products have temperature requirements incompatible with the selected zone.";
         hasError = true;
       }
     }
 
-    // Set all errors
-    if (productErrors.some(err => Object.keys(err).length > 0)) {
+    if (productErrors.some((err) => Object.keys(err).length > 0)) {
       newErrors.productErrors = productErrors;
     }
 
     setErrors(newErrors);
 
     if (hasError) {
-      setMessages({ type: 'error', text: 'Please fix the errors above.' });
+      setMessages({ type: "error", text: "Please fix the errors above." });
       setIsSubmitting(false);
       return;
     }
 
-    // Prepare submission data
-    const items = products.map(product => ({
+    const items = products.map((product) => ({
       productId: product.productId,
       quantity: parseFloat(product.quantity),
+      weights: parseFloat(product.weights),
       expiredDate: product.expiryDate,
-      weights: parseFloat((product.quantity * product.density).toFixed(2)),
     }));
 
     try {
-      const res = await axiosInstance.post('/inbounds', {
+      const res = await axiosInstance.post("/inbounds", {
         supplierId,
         zoneId,
-        items: items
+        items: items,
       });
 
-      // Success - reset form
-      setMessages({ type: 'success', text: `Import transaction ${res.data._id || ''} created successfully.` });
-      setProducts([{ productId: '', quantity: '', expiryDate: '', density: 0, name: '', storageTemperature: null }]);
-      setSupplierId('');
-      setZoneId('');
+      setMessages({
+        type: "success",
+        text: `Import transaction ${res.data._id || ""} created successfully.`,
+      });
+      setProducts([
+        {
+          productId: "",
+          quantity: "",
+          weights: "",
+          expiryDate: "",
+          density: 0,
+          name: "",
+          storageTemperature: null,
+        },
+      ]);
+      setSupplierId("");
+      setZoneId("");
       setErrors({});
       setSelectedZone(null);
-      setSupplierSearchTerm('');
-      setZoneSearchTerm('');
-      setProductSearchTerms({}); // Reset product search terms
+      setSupplierSearchTerm("");
+      setZoneSearchTerm("");
+      setProductSearchTerms({});
 
-      // Re-fetch zones to update capacity display immediately
-      const updatedZonesRes = await axiosInstance.get('/zones/without-pagination'); // Fetch without pagination as per initial fetch
+      const updatedZonesRes = await axiosInstance.get(
+        "/zones/without-pagination"
+      );
       setZones(updatedZonesRes.data || []);
-
     } catch (err) {
-      console.error('Submission error:', err);
-      const errorMessage = err?.response?.data?.message || 'Import failed. Please try again.';
-      setMessages({ type: 'error', text: errorMessage });
+      console.error("Submission error:", err);
+      const errorMessage =
+        err?.response?.data?.message || "Import failed. Please try again.";
+      setMessages({ type: "error", text: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -365,22 +422,42 @@ const ImportTransaction = () => {
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      <div className="flex items-center space-x-3 mb-6">
-        <FilePlus className="text-blue-600" size={28} />
-        <h1 className="text-3xl font-bold text-gray-800">Create Import Transaction</h1>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center space-x-3">
+          <FilePlus className="text-blue-600" size={28} />
+          <h1 className="text-3xl font-bold text-gray-800">
+            Create Import Transaction
+          </h1>
+        </div>
+        <div>
+          <Button className="p-2" type="primary" onClick={() => navigate("/historyImport")}>
+            <Eye className="mr-1" size={20} />
+            View History Import
+          </Button>
+        </div>
       </div>
 
       {messages.text && (
-        <div className={`p-4 rounded-md flex items-center gap-2 ${messages.type === 'success'
-            ? 'bg-green-100 text-green-700 border border-green-300'
-            : 'bg-red-100 text-red-700 border border-red-300'
-          }`}>
-          {messages.type === 'success' ? <CircleCheck size={20} /> : <AlertTriangle size={20} />}
+        <div
+          className={`p-4 rounded-md flex items-center gap-2 ${
+            messages.type === "success"
+              ? "bg-green-100 text-green-700 border border-green-300"
+              : "bg-red-100 text-red-700 border border-red-300"
+          }`}
+        >
+          {messages.type === "success" ? (
+            <CircleCheck size={20} />
+          ) : (
+            <AlertTriangle size={20} />
+          )}
           <span>{messages.text}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-lg space-y-8">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-8 rounded-xl shadow-lg space-y-8"
+      >
         {/* Date */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
@@ -396,20 +473,30 @@ const ImportTransaction = () => {
 
         {/* Supplier & Zone */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Supplier Dropdown with Search */}
+          {/* Supplier Dropdown */}
           <div className="relative" ref={supplierDropdownRef}>
-            <label htmlFor="supplier-search" className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-              <User className="mr-1" size={16} /> Supplier <span className="text-red-500">*</span>
+            <label
+              htmlFor="supplier-search"
+              className="block text-sm font-medium text-gray-700 mb-1 flex items-center"
+            >
+              <User className="mr-1" size={16} /> Supplier{" "}
+              <span className="text-red-500">*</span>
             </label>
             <input
               id="supplier-search"
               type="text"
-              className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.supplierId ? 'border-red-500' : 'border-gray-300'}`}
+              className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                errors.supplierId ? "border-red-500" : "border-gray-300"
+              }`}
               placeholder="Search supplier..."
-              value={supplierId ? supplierMap.get(supplierId)?.name : supplierSearchTerm}
+              value={
+                supplierId
+                  ? supplierMap.get(supplierId)?.name
+                  : supplierSearchTerm
+              }
               onChange={(e) => {
                 setSupplierSearchTerm(e.target.value);
-                setSupplierId('');
+                setSupplierId("");
                 setIsSupplierDropdownOpen(true);
                 clearMessages();
                 if (errors.supplierId) {
@@ -424,7 +511,7 @@ const ImportTransaction = () => {
             {isSupplierDropdownOpen && (
               <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
                 {filteredSuppliers.length > 0 ? (
-                  filteredSuppliers.map(supplier => (
+                  filteredSuppliers.map((supplier) => (
                     <div
                       key={supplier._id}
                       className="p-2 cursor-pointer hover:bg-blue-100"
@@ -448,28 +535,44 @@ const ImportTransaction = () => {
                 )}
               </div>
             )}
-            {errors.supplierId && <p className="text-red-500 text-sm mt-1">{errors.supplierId}</p>}
+            {errors.supplierId && (
+              <p className="text-red-500 text-sm mt-1">{errors.supplierId}</p>
+            )}
           </div>
 
-          {/* Zone Dropdown with Search */}
+          {/* Zone Dropdown */}
           <div className="relative" ref={zoneDropdownRef}>
-            <label htmlFor="zone-search" className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-              <Warehouse className="mr-1" size={16} /> Import Zone <span className="text-red-500">*</span>
+            <label
+              htmlFor="zone-search"
+              className="block text-sm font-medium text-gray-700 mb-1 flex items-center"
+            >
+              <Warehouse className="mr-1" size={16} /> Import Zone{" "}
+              <span className="text-red-500">*</span>
             </label>
             <input
               id="zone-search"
               type="text"
-              className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.zoneId || errors.zoneCompatibility || errors.weightCapacity ? 'border-red-500' : 'border-gray-300'}`}
+              className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                errors.zoneId ||
+                errors.zoneCompatibility ||
+                errors.volumeCapacity
+                  ? "border-red-500"
+                  : "border-gray-300"
+              }`}
               placeholder="Search zone..."
-              value={zoneId ? zones.find(z => z._id === zoneId)?.name : zoneSearchTerm}
+              value={
+                zoneId
+                  ? zones.find((z) => z._id === zoneId)?.name
+                  : zoneSearchTerm
+              }
               onChange={(e) => {
                 setZoneSearchTerm(e.target.value);
-                setZoneId('');
+                setZoneId("");
                 setIsZoneDropdownOpen(true);
                 clearMessages();
                 const newErrors = { ...errors };
                 delete newErrors.zoneId;
-                delete newErrors.weightCapacity;
+                delete newErrors.volumeCapacity;
                 delete newErrors.zoneCompatibility;
                 setErrors(newErrors);
               }}
@@ -479,7 +582,7 @@ const ImportTransaction = () => {
             {isZoneDropdownOpen && (
               <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
                 {filteredZones.length > 0 ? (
-                  filteredZones.map(zone => {
+                  filteredZones.map((zone) => {
                     const current = parseFloat(zone.currentCapacity) || 0;
                     const total = parseFloat(zone.totalCapacity) || 0;
                     const remaining = total - current;
@@ -494,7 +597,7 @@ const ImportTransaction = () => {
                           clearMessages();
                           const newErrors = { ...errors };
                           delete newErrors.zoneId;
-                          delete newErrors.weightCapacity;
+                          delete newErrors.volumeCapacity;
                           delete newErrors.zoneCompatibility;
                           setErrors(newErrors);
                         }}
@@ -508,16 +611,49 @@ const ImportTransaction = () => {
                 )}
               </div>
             )}
-            {errors.zoneId && <p className="text-red-500 text-sm mt-1">{errors.zoneId}</p>}
+            {errors.zoneId && (
+              <p className="text-red-500 text-sm mt-1">{errors.zoneId}</p>
+            )}
             {selectedZone && (
               <div className="mt-2 text-sm text-gray-600 space-y-1">
-                <p>Temperature range: <strong>{selectedZone.storageTemperature?.min}°C ~ {selectedZone.storageTemperature?.max}°C</strong></p>
-                <p>Current occupied capacity: <strong>{(parseFloat(selectedZone.totalCapacity) || 0).toLocaleString()} m³</strong></p>
-                <p>Remaining capacity: <strong>{((parseFloat(selectedZone.totalCapacity) || 0) - (parseFloat(selectedZone.currentCapacity) || 0)).toLocaleString()} m³ </strong></p>
+                <p>
+                  Temperature range:{" "}
+                  <strong>
+                    {selectedZone.storageTemperature?.min}°C ~{" "}
+                    {selectedZone.storageTemperature?.max}°C
+                  </strong>
+                </p>
+                <p>
+                  Current occupied capacity:{" "}
+                  <strong>
+                    {(
+                      parseFloat(selectedZone.currentCapacity) || 0
+                    ).toLocaleString()}{" "}
+                    m³
+                  </strong>
+                </p>
+                <p>
+                  Remaining capacity:{" "}
+                  <strong>
+                    {(
+                      (parseFloat(selectedZone.totalCapacity) || 0) -
+                      (parseFloat(selectedZone.currentCapacity) || 0)
+                    ).toLocaleString()}{" "}
+                    m³
+                  </strong>
+                </p>
               </div>
             )}
-            {errors.zoneCompatibility && <p className="text-red-500 text-sm mt-1">{errors.zoneCompatibility}</p>}
-            {errors.weightCapacity && <p className="text-red-500 text-sm mt-1">{errors.weightCapacity}</p>}
+            {errors.zoneCompatibility && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.zoneCompatibility}
+              </p>
+            )}
+            {errors.volumeCapacity && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.volumeCapacity}
+              </p>
+            )}
           </div>
         </div>
 
@@ -537,114 +673,190 @@ const ImportTransaction = () => {
             <PlusCircle size={18} /> Add Product
           </button>
         </div>
-        {errors.products && <p className="text-red-500 text-sm mt-2">{errors.products}</p>}
+        {errors.products && (
+          <p className="text-red-500 text-sm mt-2">{errors.products}</p>
+        )}
 
         <div className="space-y-6">
           {products.map((product, index) => {
-            const filteredProductsForThisRow = productsList.filter(prod =>
-              prod.name.toLowerCase().includes((productSearchTerms[index] || '').toLowerCase())
+            const filteredProductsForThisRow = productsList.filter((prod) =>
+              prod.name
+                .toLowerCase()
+                .includes((productSearchTerms[index] || "").toLowerCase())
             );
 
             return (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end bg-gray-50 p-4 rounded-lg border">
-                {/* Product Search Input and Storage Temperature on the same line */}
-                <div className="md:col-span-2 relative" ref={el => productDropdownRefs.current[index] = el}>
+              <div
+                key={index}
+                className="grid grid-cols-1 md:grid-cols-7 gap-4 items-end bg-gray-50 p-4 rounded-lg border"
+              >
+                {/* Product Search */}
+                <div
+                  className="md:col-span-2 relative"
+                  ref={(el) => (productDropdownRefs.current[index] = el)}
+                >
                   <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center justify-between">
                     <span>Product *</span>
                     {product.productId && product.storageTemperature && (
                       <span className="text-xs text-gray-600 flex items-center">
                         <Thermometer size={14} className="mr-1 text-blue-500" />
-                        Temp: {product.storageTemperature.min}°C ~ {product.storageTemperature.max}°C
+                        Temp: {product.storageTemperature.min}°C ~{" "}
+                        {product.storageTemperature.max}°C
                       </span>
                     )}
                   </label>
                   <input
                     type="text"
-                    className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.productErrors?.[index]?.productId ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.productErrors?.[index]?.productId
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
                     placeholder="Search product..."
-                    value={product.productId ? productMap.get(product.productId)?.name : (productSearchTerms[index] || '')}
+                    value={
+                      product.productId
+                        ? productMap.get(product.productId)?.name
+                        : productSearchTerms[index] || ""
+                    }
                     onChange={(e) => {
-                      setProductSearchTerms(prev => ({ ...prev, [index]: e.target.value }));
-                      handleProductChange(index, 'productId', ''); // Clear selected product ID on search
-                      setIsProductDropdownOpen(prev => ({ ...prev, [index]: true }));
+                      setProductSearchTerms((prev) => ({
+                        ...prev,
+                        [index]: e.target.value,
+                      }));
+                      handleProductChange(index, "productId", "");
+                      setIsProductDropdownOpen((prev) => ({
+                        ...prev,
+                        [index]: true,
+                      }));
                     }}
-                    onFocus={() => setIsProductDropdownOpen(prev => ({ ...prev, [index]: true }))}
+                    onFocus={() =>
+                      setIsProductDropdownOpen((prev) => ({
+                        ...prev,
+                        [index]: true,
+                      }))
+                    }
                     disabled={isSubmitting}
                   />
                   {isProductDropdownOpen[index] && (
                     <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
                       {filteredProductsForThisRow.length > 0 ? (
-                        filteredProductsForThisRow.map(prod => (
+                        filteredProductsForThisRow.map((prod) => (
                           <div
                             key={prod._id}
                             className="p-2 cursor-pointer hover:bg-blue-100"
-                            onClick={() => handleProductChange(index, 'productId', prod._id)}
+                            onClick={() =>
+                              handleProductChange(index, "productId", prod._id)
+                            }
                           >
                             {prod.name}
                           </div>
                         ))
                       ) : (
-                        <div className="p-2 text-gray-500">No products found.</div>
+                        <div className="p-2 text-gray-500">
+                          No products found.
+                        </div>
                       )}
                     </div>
                   )}
                   {errors.productErrors?.[index]?.productId && (
-                    <p className="text-red-500 text-xs mt-1">{errors.productErrors[index].productId}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.productErrors[index].productId}
+                    </p>
                   )}
                 </div>
 
-                {/* Weight (kg/unit) */}
+                {/* Density (kg/m³) - Readonly */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg/unit) *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Density (kg/m³)
+                  </label>
                   <input
                     type="number"
-                    min="0"
-                    step="0.01"
                     value={product.density}
-                    onChange={e => handleProductChange(index, 'density', e.target.value)}
-                    className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.productErrors?.[index]?.density ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    disabled={isSubmitting}
-                    placeholder="Enter density"
+                    readOnly
+                    className="w-full p-2.5 bg-gray-100 rounded-md text-gray-700 cursor-not-allowed"
                   />
-                  {errors.productErrors?.[index]?.density && (
-                    <p className="text-red-500 text-xs mt-1">{errors.productErrors[index].density}</p>
-                  )}
                 </div>
 
                 {/* Quantity */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Quantity *
+                  </label>
                   <input
                     type="number"
                     min="1"
                     step="1"
                     value={product.quantity}
-                    onChange={e => handleProductChange(index, 'quantity', e.target.value)}
-                    className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.productErrors?.[index]?.quantity ? 'border-red-500' : 'border-gray-300'
-                      }`}
+                    onChange={(e) =>
+                      handleProductChange(index, "quantity", e.target.value)
+                    }
+                    className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.productErrors?.[index]?.quantity
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
                     disabled={isSubmitting}
                     placeholder="Enter quantity"
                   />
                   {errors.productErrors?.[index]?.quantity && (
-                    <p className="text-red-500 text-xs mt-1">{errors.productErrors[index].quantity}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.productErrors[index].quantity}
+                    </p>
+                  )}
+                </div>
+
+                {/* Weights (kg) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Weights (kg) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={product.weights}
+                    onChange={(e) =>
+                      handleProductChange(index, "weights", e.target.value)
+                    }
+                    className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.productErrors?.[index]?.weights
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
+                    disabled={isSubmitting}
+                    placeholder="Enter weights"
+                  />
+                  {errors.productErrors?.[index]?.weights && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.productErrors[index].weights}
+                    </p>
                   )}
                 </div>
 
                 {/* Expiry Date */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Expiry Date *
+                  </label>
                   <input
                     type="date"
                     value={product.expiryDate}
                     min={new Date().toISOString().slice(0, 10)}
-                    onChange={e => handleProductChange(index, 'expiryDate', e.target.value)}
-                    className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.productErrors?.[index]?.expiryDate ? 'border-red-500' : 'border-gray-300'
-                      }`}
+                    onChange={(e) =>
+                      handleProductChange(index, "expiryDate", e.target.value)
+                    }
+                    className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.productErrors?.[index]?.expiryDate
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
                     disabled={isSubmitting}
                   />
                   {errors.productErrors?.[index]?.expiryDate && (
-                    <p className="text-red-500 text-xs mt-1">{errors.productErrors[index].expiryDate}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.productErrors[index].expiryDate}
+                    </p>
                   )}
                 </div>
 
@@ -667,13 +879,15 @@ const ImportTransaction = () => {
           })}
         </div>
 
-        {/* Total Weight */}
+        {/* Total Volume */}
         <div className="flex justify-between items-center bg-blue-50 p-4 rounded-lg border border-blue-200">
           <span className="text-lg font-semibold text-blue-800 flex items-center">
             <Weight size={20} className="mr-2" />
-            Total Weight:
+            Total Volume:
           </span>
-          <span className="text-xl font-bold text-blue-900">{totalWeight.toFixed(2)} kg</span>
+          <span className="text-xl font-bold text-blue-900">
+            {totalVolume.toFixed(2)} m³
+          </span>
         </div>
 
         {/* Submit */}
