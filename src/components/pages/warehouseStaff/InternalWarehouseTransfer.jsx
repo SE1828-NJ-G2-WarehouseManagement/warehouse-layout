@@ -148,6 +148,7 @@ const InternalWarehouseTransfer = () => {
     return uniqueProducts.map((item, index) => ({
       id: item.productId,
       name: item.productName,
+      zoneItemId: item.zoneItemId,
       currentWarehouseId: item.warehouseId,
       currentWarehouseName: item.warehouseName,
       zoneId: item.zoneId,
@@ -274,77 +275,54 @@ const InternalWarehouseTransfer = () => {
   };
 
   // Handle transfer request submission
-  const handleTransferRequest = async (e) => {
-    e.preventDefault();
-    setMessage({ type: "", text: "" });
+  // Handle transfer request submission
+const handleTransferRequest = async (e) => {
+  e.preventDefault();
+  setMessage({ type: "", text: "" });
 
-    if (transferItems.length === 0 || !destinationWarehouse) {
-      setMessage({
-        type: "error",
-        text: "Please add products and select a Destination Warehouse.",
-      });
-      return;
-    }
+  if (transferItems.length === 0 || !destinationWarehouse) {
+    setMessage({
+      type: "error",
+      text: "Please add products and select a Destination Warehouse.",
+    });
+    return;
+  }
 
-    // Check capacity constraint
-    if (selectedWarehouseDetails) {
-      const totalAvailableCapacity =
-        selectedWarehouseDetails.warehouseCapacity?.available || 0;
-
-      if (totalRequiredCapacity > totalAvailableCapacity) {
-        setMessage({
-          type: "error",
-          text: `Total required capacity (${totalRequiredCapacity.toFixed(
-            2
-          )} m³) exceeds available warehouse capacity (${totalAvailableCapacity.toFixed(
-            2
-          )} m³).`,
-        });
-        return;
-      }
-    }
-
-    const confirmResult = window.confirm(
-      "Are you sure you want to submit this warehouse transfer request?"
-    );
-    if (!confirmResult) {
-      setMessage({ type: "info", text: "Transfer request cancelled by user." });
-      return;
-    }
-
-    try {
-      const transferData = {
-        items: transferItems.map((item) => ({
-          zoneItemId: item.productId,
-          destinationWarehouseId: destinationWarehouse,
+  try {
+    // Lấy đúng zoneItemId từ productsWithWarehouseInfo
+    const transferData = {
+      items: transferItems.map((item) => {
+        const product = productsWithWarehouseInfo.find(
+          (p) => p.id === item.productId
+        );
+        return {
+          zoneItemId: product?.zoneItemId, // lấy đúng zoneItemId
           quantity: item.quantity,
-        })),
-        receiver: {
-          warehouseId: destinationWarehouse,
-          zoneId: null,
-        },
-      };
+        };
+      }),
+      receiver: {
+        warehouseId: destinationWarehouse,
+      },
+    };
 
-      await createInternalTransfer(transferData);
+    await createInternalTransfer(transferData);
 
-      setMessage({
-        type: "success",
-        text: "Internal warehouse transfer request created successfully!",
-      });
+    setMessage({
+      type: "success",
+      text: "Internal warehouse transfer request created successfully!",
+    });
 
-      // Reset form
-      setTransferItems([]);
-      setSelectedProductToAdd("");
-      setDestinationWarehouse("");
-      setSelectedWarehouseDetails(null);
-    } catch (error) {
-      console.error("Error creating transfer request:", error);
-      setMessage({
-        type: "error",
-        text: "Transfer request failed. Please try again later.",
-      });
-    }
-  };
+    setTransferItems([]);
+    setSelectedProductToAdd("");
+    setDestinationWarehouse("");
+    setSelectedWarehouseDetails(null);
+  } catch (error) {
+    setMessage({
+      type: "error",
+      text: "Transfer request failed. Please try again later.",
+    });
+  }
+};
 
   // Clean up on unmount
   useEffect(() => {
@@ -364,7 +342,6 @@ const InternalWarehouseTransfer = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-2xl p-6 md:p-8 lg:p-10 border border-gray-100">
-
       <div className="mb-6">
         <nav className="flex items-center text-gray-500 text-sm mb-4">
           <div className="hover:text-blue-600 transition-colors">
