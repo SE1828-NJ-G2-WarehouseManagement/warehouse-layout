@@ -1,285 +1,326 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Edit, Image as ImageIcon, X, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef, useContext } from "react";
+import { Edit, Image as ImageIcon, X, AlertCircle } from "lucide-react";
+import { ProductContext } from "../../../context/ProductContext";
+import CategoryService from "../../../services/categoryService";
 
-// Dữ liệu danh mục mẫu. Bạn cần thay thế bằng dữ liệu thực tế từ API của bạn.
-// Đảm bảo các 'id' ở đây khớp với 'categoryId' của sản phẩm.
-const allCategories = [
-    { id: 'CAT001', name: 'Electronics', status: 'active' },
-    { id: 'CAT002', name: 'Clothing', status: 'pending' },
-    { id: 'CAT003', name: 'Home Appliances', status: 'active' },
-    { id: 'CAT004', name: 'Books', status: 'active' },
-    { id: 'CAT005', name: 'Sports Equipment', status: 'pending' },
-    { id: 'CAT006', name: 'Food & Beverage', status: 'active' },
-    { id: 'CAT007', name: 'Beauty & Health', status: 'active' },
-];
+const EditProduct = ({
+  initialData,
+  onClose,
+  onSubmit,
+  existingProductNames = [],
+}) => {
+  const [productName, setProductName] = useState(initialData.name);
+  const [categoryId, setCategoryId] = useState(initialData.category?._id || "");
+  const [minStorageTemp, setMinStorageTemp] = useState(
+    initialData.storageTemperature?.min || ""
+  );
+  const [maxStorageTemp, setMaxStorageTemp] = useState(
+    initialData.storageTemperature?.max || ""
+  );
+  const [density, setDensity] = useState(initialData.density || "");
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(initialData.image);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const fileInputRef = useRef(null);
 
-const EditProduct = ({ initialData, onClose, onSubmit, existingProductNames = [] }) => {
-    // Sử dụng state để quản lý giá trị của form
-    const [productName, setProductName] = useState(initialData.name);
-    const [categoryId, setCategoryId] = useState(initialData.categoryId); // Đây là điểm quan trọng
-    const [minStorageTemp, setMinStorageTemp] = useState(initialData.minStorageTemp);
-    const [maxStorageTemp, setMaxStorageTemp] = useState(initialData.maxStorageTemp);
-    const [density, setDensity] = useState(initialData.density);
-    const [imageFile, setImageFile] = useState(null); // File object mới nếu người dùng chọn ảnh mới
-    const [imagePreview, setImagePreview] = useState(initialData.imageUrl); // URL để hiển thị preview (có thể là URL cũ hoặc Data URL mới)
-    const [errors, setErrors] = useState({});
-    const fileInputRef = useRef(null); // Ref để reset input file
+  const { uploadProductImage, updateProduct } = useContext(ProductContext);
 
-    // Sử dụng useEffect để cập nhật state khi prop `initialData` thay đổi.
-    // Điều này cực kỳ quan trọng khi bạn tái sử dụng cùng một modal cho các sản phẩm khác nhau.
-    // Nó đảm bảo form luôn hiển thị dữ liệu của sản phẩm đang được chỉnh sửa.
-    useEffect(() => {
-        // console.log('EditProduct mounted or initialData changed. Initializing with:', initialData); // Để debug
-        setProductName(initialData.name);
-        setCategoryId(initialData.categoryId); // Đảm bảo categoryId được đặt đúng từ initialData
-        setMinStorageTemp(initialData.minStorageTemp);
-        setMaxStorageTemp(initialData.maxStorageTemp);
-        setDensity(initialData.density);
-        setImagePreview(initialData.imageUrl); // Đặt ảnh preview là ảnh cũ
-        setImageFile(null); // Reset file input (nghĩa là chưa có file mới được chọn)
-        if (fileInputRef.current) {
-            fileInputRef.current.value = ''; // Đảm bảo input file trống
-        }
-        setErrors({}); // Xóa lỗi khi mở lại form cho sản phẩm mới
-    }, [initialData]); // Chỉ chạy lại khi initialData thay đổi
-
-    const validateForm = () => {
-        const newErrors = {};
-        if (!productName.trim()) {
-            newErrors.productName = 'Product Name is required.';
-        } else if (existingProductNames.includes(productName.trim()) && productName.trim() !== initialData.name) {
-            // Kiểm tra trùng tên, nhưng cho phép tên sản phẩm hiện tại
-            newErrors.productName = 'Product Name must be unique.';
-        }
-        if (!categoryId) {
-            newErrors.categoryId = 'Category is required.';
-        }
-        // Kiểm tra nhiệt độ
-        const minTemp = parseFloat(minStorageTemp);
-        const maxTemp = parseFloat(maxStorageTemp);
-        if (minStorageTemp === '' || isNaN(minTemp)) {
-            newErrors.minStorageTemp = 'Min Storage Temperature is required and must be a number.';
-        }
-        if (maxStorageTemp === '' || isNaN(maxTemp)) {
-            newErrors.maxStorageTemp = 'Max Storage Temperature is required and must be a number.';
-        } else if (!isNaN(minTemp) && !isNaN(maxTemp) && minTemp >= maxTemp) {
-            newErrors.maxStorageTemp = 'Max Storage Temperature must be greater than Min Storage Temperature.';
-        }
-        // Kiểm tra mật độ
-        const prodDensity = parseFloat(density);
-        if (density === '' || isNaN(prodDensity) || prodDensity <= 0) {
-            newErrors.density = 'Density is required and must be a positive number.';
-        }
-        if (!imagePreview) { // Kiểm tra xem có ảnh preview hay không (ảnh cũ hoặc ảnh mới)
-            newErrors.imageFile = 'Product Image is required.';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categoryService = new CategoryService();
+        const data = await categoryService.getActiveCategories();
+        setCategories(data);
+      } catch (err) {
+        setErrors((prev) => ({
+          ...prev,
+          categoryId: "Failed to load categories",
+        }));
+      }
     };
+    fetchCategories();
+  }, []);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!validateForm()) {
-            return;
-        }
+  useEffect(() => {
+    setProductName(initialData.name);
+    setCategoryId(initialData.category?._id || "");
+    setMinStorageTemp(initialData.storageTemperature?.min || "");
+    setMaxStorageTemp(initialData.storageTemperature?.max || "");
+    setDensity(initialData.density || "");
+    setImagePreview(initialData.image);
+    setImageFile(null);
+    setErrors({});
+  }, [initialData]);
 
-        // Tạo đối tượng dữ liệu sản phẩm đã cập nhật để gửi đi
-        const updatedData = {
-            id: initialData.id, // Giữ nguyên ID sản phẩm
-            name: productName.trim(),
-            categoryId: categoryId, // Lấy giá trị categoryId HIỆN TẠI từ state
-            minStorageTemp: parseFloat(minStorageTemp),
-            maxStorageTemp: parseFloat(maxStorageTemp),
-            density: parseFloat(density),
-            // `imagePreview` sẽ là URL ảnh cũ hoặc Data URL của ảnh mới được tải lên
-            imageUrl: imagePreview,
-            // `imageFile` chỉ có giá trị nếu người dùng tải ảnh mới, nếu không sẽ là null
-            imageFile: imageFile
-        };
-        // console.log("Updated Product Data to submit:", updatedData); // Để debug
-        onSubmit(updatedData);
-        onClose();
-    };
+  const validateForm = () => {
+    const newErrors = {};
+    if (!productName.trim()) {
+      newErrors.productName = "Product Name is required.";
+    } else if (existingProductNames.includes(productName.trim())) {
+      newErrors.productName = "Product Name must be unique.";
+    }
+    if (!categoryId) {
+      newErrors.categoryId = "Category is required.";
+    }
+    if (!minStorageTemp || isNaN(minStorageTemp)) {
+      newErrors.minStorageTemp = "Min Storage Temperature must be a number.";
+    }
+    if (!maxStorageTemp || isNaN(maxStorageTemp)) {
+      newErrors.maxStorageTemp = "Max Storage Temperature must be a number.";
+    }
+    if (Number(minStorageTemp) >= Number(maxStorageTemp)) {
+      newErrors.maxStorageTemp =
+        "Max Temperature must be greater than Min Temperature.";
+    }
+    if (!density || isNaN(density) || Number(density) <= 0) {
+      newErrors.density = "Density must be a positive number.";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setImageFile(file); // Lưu trữ File object mới
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result); // Cập nhật preview bằng Data URL của ảnh mới
-            };
-            reader.readAsDataURL(file); // Đọc file thành Data URL
-            setErrors(prev => ({ ...prev, imageFile: '' })); // Xóa lỗi ảnh
-        } else {
-            setImageFile(null);
-            setImagePreview('');
-        }
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    setLoading(true);
 
-    const handleRemoveImage = () => {
-        setImageFile(null);
-        setImagePreview('');
-        if (fileInputRef.current) {
-            fileInputRef.current.value = ''; // Reset input file
-        }
-    };
+    try {
+      let imageUrl = imagePreview;
+      if (imageFile) {
+        imageUrl = await uploadProductImage(imageFile);
+      }
 
-    return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center p-5 border-b border-gray-200">
-                    <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                        <Edit className="size-6 text-blue-600" />
-                        Edit Product: {initialData.name}
-                    </h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 transition-colors">
-                        <X className="size-6" />
-                    </button>
-                </div>
+      const updatedData = {
+        id: initialData._id,
+        name: productName.trim(),
+        category: categoryId,
+        density: Number(density),
+        storageTemperature: {
+          min: Number(minStorageTemp),
+          max: Number(maxStorageTemp),
+        },
+        image: imageUrl,
+        reason: "Cập nhật sản phẩm",
+      };
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                    <div>
-                        <label htmlFor="productName" className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                        <input
-                            type="text"
-                            id="productName"
-                            className={`w-full p-3 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.productName ? 'border-red-500' : 'border-gray-300'}`}
-                            value={productName}
-                            onChange={(e) => {
-                                setProductName(e.target.value);
-                                setErrors(prev => ({ ...prev, productName: '' }));
-                            }}
-                            placeholder="Enter product name"
-                        />
-                        {errors.productName && <p className="mt-1 text-sm text-red-600 flex items-center"><AlertCircle className="size-4 mr-1"/>{errors.productName}</p>}
-                    </div>
+      await updateProduct(updatedData);
+      onSubmit(updatedData);
+    } catch (err) {
+      setErrors({ submit: "Failed to update product." });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                    <div>
-                        <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                        <select
-                            id="categoryId"
-                            className={`w-full p-3 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.categoryId ? 'border-red-500' : 'border-gray-300'}`}
-                            value={categoryId} // RẤT QUAN TRỌNG: Đảm bảo giá trị này khớp với một option.value
-                            onChange={(e) => {
-                                setCategoryId(e.target.value);
-                                setErrors(prev => ({ ...prev, categoryId: '' }));
-                            }}
-                        >
-                            <option value="">Select a category</option>
-                            {allCategories.map(cat => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
-                        </select>
-                        {errors.categoryId && <p className="mt-1 text-sm text-red-600 flex items-center"><AlertCircle className="size-4 mr-1"/>{errors.categoryId}</p>}
-                    </div>
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="minStorageTemp" className="block text-sm font-medium text-gray-700 mb-1">Min Storage Temperature (°C)</label>
-                            <input
-                                type="number"
-                                id="minStorageTemp"
-                                className={`w-full p-3 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.minStorageTemp ? 'border-red-500' : 'border-gray-300'}`}
-                                value={minStorageTemp}
-                                onChange={(e) => {
-                                    setMinStorageTemp(e.target.value);
-                                    setErrors(prev => ({ ...prev, minStorageTemp: '' }));
-                                }}
-                                placeholder="e.g., 5"
-                            />
-                            {errors.minStorageTemp && <p className="mt-1 text-sm text-red-600 flex items-center"><AlertCircle className="size-4 mr-1"/>{errors.minStorageTemp}</p>}
-                        </div>
-                        <div>
-                            <label htmlFor="maxStorageTemp" className="block text-sm font-medium text-gray-700 mb-1">Max Storage Temperature (°C)</label>
-                            <input
-                                type="number"
-                                id="maxStorageTemp"
-                                className={`w-full p-3 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.maxStorageTemp ? 'border-red-500' : 'border-gray-300'}`}
-                                value={maxStorageTemp}
-                                onChange={(e) => {
-                                    setMaxStorageTemp(e.target.value);
-                                    setErrors(prev => ({ ...prev, maxStorageTemp: '' }));
-                                }}
-                                placeholder="e.g., 30"
-                            />
-                            {errors.maxStorageTemp && <p className="mt-1 text-sm text-red-600 flex items-center"><AlertCircle className="size-4 mr-1"/>{errors.maxStorageTemp}</p>}
-                        </div>
-                    </div>
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(initialData.image);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
-                    <div>
-                        <label htmlFor="density" className="block text-sm font-medium text-gray-700 mb-1">Density</label>
-                        <input
-                            type="number"
-                            id="density"
-                            step="0.01"
-                            className={`w-full p-3 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${errors.density ? 'border-red-500' : 'border-gray-300'}`}
-                            value={density}
-                            onChange={(e) => {
-                                setDensity(e.target.value);
-                                setErrors(prev => ({ ...prev, density: '' }));
-                            }}
-                            placeholder="e.g., 1.05"
-                        />
-                        {errors.density && <p className="mt-1 text-sm text-red-600 flex items-center"><AlertCircle className="size-4 mr-1"/>{errors.density}</p>}
-                    </div>
-
-                    <div>
-                        <label htmlFor="imageUpload" className="block text-sm font-medium text-gray-700 mb-1">Product Image</label>
-                        <div className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md ${errors.imageFile ? 'border-red-500' : 'border-gray-300'}`}>
-                            {imagePreview ? (
-                                <div className="relative w-40 h-40 group">
-                                    <img src={imagePreview} alt="Product Preview" className="w-full h-full object-cover rounded-md" />
-                                    <button
-                                        type="button"
-                                        onClick={handleRemoveImage}
-                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        title="Remove image"
-                                    >
-                                        <X className="size-4" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="space-y-1 text-center">
-                                    <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                                    <div className="flex text-sm text-gray-600">
-                                        <label
-                                            htmlFor="file-upload"
-                                            className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
-                                        >
-                                            <span>Upload a file</span>
-                                            <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleImageChange} ref={fileInputRef} accept="image/*" />
-                                        </label>
-                                        <p className="pl-1">or drag and drop</p>
-                                    </div>
-                                    <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                                </div>
-                            )}
-                        </div>
-                        {errors.imageFile && <p className="mt-1 text-sm text-red-600 flex items-center"><AlertCircle className="size-4 mr-1"/>{errors.imageFile}</p>}
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-5 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-                        >
-                            <Edit className="size-4" />
-                            Submit Edit Request
-                        </button>
-                    </div>
-                </form>
-            </div>
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div className="flex justify-between items-center pb-3 mb-3 border-b">
+          <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Edit className="size-6 text-blue-600" />
+            Edit Product
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500"
+          >
+            <X className="size-6" />
+          </button>
         </div>
-    );
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Product Name
+            </label>
+            <input
+              type="text"
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+              className={`w-full p-2 border rounded ${
+                errors.productName ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.productName && (
+              <p className="text-red-500 text-sm mt-1">{errors.productName}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Category
+            </label>
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className={`w-full p-2 border rounded ${
+                errors.categoryId ? "border-red-500" : "border-gray-300"
+              }`}
+            >
+              <option value="">Select Category</option>
+              {categories.map((cat) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+            {errors.categoryId && (
+              <p className="text-red-500 text-sm mt-1">{errors.categoryId}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Min Temperature (°C)
+              </label>
+              <input
+                type="number"
+                value={
+                  minStorageTemp !== undefined && minStorageTemp !== null
+                    ? minStorageTemp
+                    : ""
+                }
+                onChange={(e) => setMinStorageTemp(e.target.value)}
+                className={`w-full p-2 border rounded ${
+                  errors.minStorageTemp ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.minStorageTemp && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.minStorageTemp}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Max Temperature (°C)
+              </label>
+              <input
+                type="number"
+                value={maxStorageTemp}
+                onChange={(e) => setMaxStorageTemp(e.target.value)}
+                className={`w-full p-2 border rounded ${
+                  errors.maxStorageTemp ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.maxStorageTemp && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.maxStorageTemp}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Density
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={density}
+              onChange={(e) => setDensity(e.target.value)}
+              className={`w-full p-2 border rounded ${
+                errors.density ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.density && (
+              <p className="text-red-500 text-sm mt-1">{errors.density}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Product Image
+            </label>
+            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+              <div className="space-y-1 text-center w-full">
+                {imagePreview && (
+                  <div className="relative inline-block mb-2">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="max-h-48 rounded mx-auto"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                )}
+                <div className="flex text-sm text-gray-600 justify-center">
+                  <label className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
+                    <span>Upload a file</span>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="sr-only"
+                      onChange={handleImageChange}
+                      accept="image/*"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {errors.submit && (
+            <div className="text-red-500 text-sm">{errors.submit}</div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="animate-spin">⌛</span>
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Edit className="size-4" />
+                  Submit Edit Request
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 };
 
 export default EditProduct;

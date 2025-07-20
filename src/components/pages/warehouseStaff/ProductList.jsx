@@ -1,16 +1,5 @@
-import React, {
-  useState,
-  useMemo,
-  useEffect,
-  useCallback,
-  useContext,
-} from "react";
+import React, { useState, useContext, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
-import CreateProduct from "./CreateProduct";
-import EditProduct from "./EditProduct";
-import { ProductContext } from "../../../context/ProductContext"; // Thêm dòng này
-import CategoryService from "../../../services/categoryService";
-
 import {
   ChevronRight,
   PlusCircle,
@@ -23,23 +12,21 @@ import {
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
-
-const allCategories = [
-  { id: "CAT001", name: "Electronics", status: "active" },
-  { id: "CAT002", name: "Clothing", status: "pending" },
-  { id: "CAT003", name: "Home Appliances", status: "active" },
-  { id: "CAT004", name: "Books", status: "active" },
-  { id: "CAT005", name: "Sports Equipment", status: "pending" },
-  { id: "CAT006", name: "Food & Beverage", status: "active" },
-  { id: "CAT007", name: "Beauty & Health", status: "active" },
-];
+import { ProductContext } from "../../../context/ProductContext";
+import CategoryService from "../../../services/categoryService";
+import CreateProduct from "./CreateProduct";
+import EditProduct from "./EditProduct";
 
 const ITEMS_PER_PAGE = 10;
 
 const ProductList = () => {
-  const { products, loading, fetchAllProducts } = useContext(ProductContext); // Sử dụng context
-  const [editRequests, setEditRequests] = useState([]);
-  const [activityRequests, setActivityRequests] = useState([]);
+  const {
+    products,
+    loading,
+    fetchAllProducts,
+    changeProductStatus,
+    getProductById,
+  } = useContext(ProductContext);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterActivity, setFilterActivity] = useState("all");
@@ -49,174 +36,10 @@ const ProductList = () => {
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [categories, setCategories] = useState([]);
-  // Lấy dữ liệu từ API khi mount
-  useEffect(() => {
-    fetchAllProducts();
-  }, [fetchAllProducts]);
-
-  // Chuẩn hóa dữ liệu products từ API cho giống mockProducts
-  const normalizedProducts = useMemo(() => {
-    if (!Array.isArray(products)) return [];
-    return products.map((p) => ({
-      id: p._id || p.id,
-      name: p.name,
-      imageUrl: p.image || p.imageUrl,
-      minStorageTemp: p.storageTemperature?.min,
-      maxStorageTemp: p.storageTemperature?.max,
-      density: p.density,
-      categoryName: p.category?.name || "N/A",
-      status: (p.status || "").toLowerCase(), // 'approved' hoặc 'pending'
-      activityStatus: (p.action || p.activityStatus || "").toLowerCase(), // 'active' hoặc 'inactive'
-    }));
-  }, [products]);
-
-  const existingProductNames = useMemo(() => {
-    return normalizedProducts.map((p) => p.name?.trim());
-  }, [normalizedProducts]);
-
-  const filteredAndSortedProducts = useMemo(() => {
-    let currentProducts = normalizedProducts.filter(
-      (product) =>
-        (product.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (product.id || "").toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    if (filterStatus !== "all") {
-      currentProducts = currentProducts.filter(
-        (product) => product.status === filterStatus
-      );
-    }
-
-    if (filterActivity !== "all") {
-      currentProducts = currentProducts.filter(
-        (product) => product.activityStatus === filterActivity
-      );
-    }
-
-    currentProducts.sort((a, b) => {
-      if (a.status === "pending" && b.status === "approved") return -1;
-      if (a.status === "approved" && b.status === "pending") return 1;
-      return 0;
-    });
-
-    return currentProducts;
-  }, [normalizedProducts, searchTerm, filterStatus, filterActivity]);
-
-  const paginatedProducts = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredAndSortedProducts.slice(
-      startIndex,
-      startIndex + ITEMS_PER_PAGE
-    );
-  }, [filteredAndSortedProducts, currentPage]);
-
-  const totalPages = useMemo(() => {
-    return Math.ceil(filteredAndSortedProducts.length / ITEMS_PER_PAGE);
-  }, [filteredAndSortedProducts]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterStatus, filterActivity]);
-
-  const getCategoryNameById = useCallback((categoryId) => {
-    const category = allCategories.find((cat) => cat.id === categoryId);
-    return category ? category.name : "N/A";
-  }, []);
-
-  const handleChangeActivityStatus = useCallback(
-    (productId, currentActivityStatus, productStatus) => {
-      if (productStatus !== "approved") {
-        setMessage({
-          type: "info",
-          text: `Cannot change the activity status for product ${productId} as its current status is not 'Approved'.`,
-        });
-        return;
-      }
-
-      const hasPendingRequest =
-        editRequests.some(
-          (req) => req.productId === productId && req.status === "pending_edit"
-        ) ||
-        activityRequests.some(
-          (req) =>
-            req.productId === productId && req.status === "pending_activity"
-        );
-
-      if (hasPendingRequest) {
-        setMessage({
-          type: "info",
-          text: `Cannot change activity status for product ${productId} while there is a pending request.`,
-        });
-        return;
-      }
-
-      const newActivityStatus =
-        currentActivityStatus === "active" ? "inactive" : "active";
-      const actionText =
-        newActivityStatus === "active" ? "activate" : "deactivate";
-
-      if (
-        window.confirm(
-          `Are you sure you want to ${actionText} product ${productId}?`
-        )
-      ) {
-        const requestId = `PRODACTREQ${(activityRequests.length + 1)
-          .toString()
-          .padStart(3, "0")}`;
-        setActivityRequests((prev) => [
-          ...prev,
-          {
-            id: requestId,
-            productId: productId,
-            currentActivityStatus: currentActivityStatus,
-            newActivityStatus: newActivityStatus,
-            status: "pending_activity",
-            timestamp: new Date().toISOString(),
-          },
-        ]);
-        // Không sửa products ở đây vì products lấy từ API, chỉ hiển thị pending ở UI
-        setMessage({
-          type: "success",
-          text: `Activity status change request for product ${productId} has been submitted for approval.`,
-        });
-      }
-    },
-    [editRequests, activityRequests]
-  );
-
-  const handleEditProduct = (productId, status) => {
-    if (status !== "approved") {
-      setMessage({
-        type: "info",
-        text: `Cannot edit product ${productId} as its current status is not 'Approved'.`,
-      });
-      return;
-    }
-
-    const hasPendingRequest =
-      editRequests.some(
-        (req) => req.productId === productId && req.status === "pending_edit"
-      ) ||
-      activityRequests.some(
-        (req) =>
-          req.productId === productId && req.status === "pending_activity"
-      );
-
-    if (hasPendingRequest) {
-      setMessage({
-        type: "info",
-        text: `Cannot edit product ${productId} while there is a pending request.`,
-      });
-      return;
-    }
-
-    const product = normalizedProducts.find((p) => p.id === productId);
-    if (product) {
-      setEditingProduct(product);
-      setShowEditForm(true);
-    }
-  };
-
+const [editRequests, setEditRequests] = useState([]);
+const [activityRequests, setActivityRequests] = useState([]); 
+const [actionLoading, setActionLoading] = useState(false);
+  // Handle creating new product
   const handleAddProduct = async () => {
     try {
       const categoryService = new CategoryService();
@@ -224,114 +47,136 @@ const ProductList = () => {
       setCategories(data);
       setShowCreateForm(true);
     } catch (err) {
-      console.error("Error fetching categories:", err);
       setMessage({
         type: "error",
-        text: "Failed to fetch categories for product creation.",
+        text: "Failed to load categories. Please try again.",
       });
     }
   };
 
-  const handleEditRequestSubmit = useCallback(
-    (updatedData) => {
-      const existingRequestIndex = editRequests.findIndex(
-        (req) =>
-          req.productId === updatedData.id && req.status === "pending_edit"
-      );
+ const handleChangeActivityStatus = useCallback(
+   async (product) => {
+     if (product.status !== "APPROVED") {
+       setMessage({
+         type: "info",
+         text: `Cannot change activity status as product is not approved.`,
+       });
+       return;
+     }
 
-      if (existingRequestIndex !== -1) {
-        setEditRequests((prev) =>
-          prev.map((req, index) =>
-            index === existingRequestIndex
-              ? {
-                  ...req,
-                  newData: updatedData,
-                  timestamp: new Date().toISOString(),
-                }
-              : req
-          )
-        );
-        setMessage({
-          type: "info",
-          text: `Edit request for product ${updatedData.id} has been updated and is awaiting approval.`,
-        });
-      } else {
-        const requestId = `PRODEDITREQ${(editRequests.length + 1)
-          .toString()
-          .padStart(3, "0")}`;
-        setEditRequests((prev) => [
-          ...prev,
-          {
-            id: requestId,
-            productId: updatedData.id,
-            oldData: normalizedProducts.find((p) => p.id === updatedData.id),
-            newData: updatedData,
-            status: "pending_edit",
-            timestamp: new Date().toISOString(),
-          },
-        ]);
+     if (product.pendingChanges) {
+       setMessage({
+         type: "info",
+         text: "Cannot change activity status while there are pending changes.",
+       });
+       return;
+     }
+
+    const newAction = product.action === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    const actionText = newAction === "ACTIVE" ? "activate" : "deactivate";
+
+     if (
+       window.confirm(`Are you sure you want to ${actionText} this product?`)
+     ) {
+       try {
+        setActionLoading(true);
+         await changeProductStatus(product._id, newAction);
+         await fetchAllProducts();
+         setMessage({
+           type: "success",
+           text: `Product has been ${actionText}d successfully.`,
+         });
+       } catch (error) {
+         setMessage({
+           type: "error",
+           text: `Failed to ${actionText} product.`,
+         });
+       } finally {
+          setActionLoading(true);
+       }
+     }
+   },
+   [changeProductStatus, fetchAllProducts]
+ );
+
+  // Handle editing product
+ const handleEditProduct = async (productId, status) => {
+   if (status !== "APPROVED") {
+     setMessage({
+       type: "info",
+       text: `Cannot edit product as it is not approved.`,
+     });
+     return;
+   }
+
+   try {
+     const productData = await getProductById(productId);
+     if (productData.pendingChanges) {
+       setMessage({
+         type: "info",
+         text: "Cannot edit while changes are pending.",
+       });
+       return;
+     }
+     setEditingProduct(productData);
+     setShowEditForm(true);
+   } catch (error) {
+     setMessage({
+       type: "error",
+       text: "Failed to fetch product details.",
+     });
+   }
+ };
+
+  // Handle edit submission
+  const handleEditRequestSubmit = useCallback(
+    async (updatedData) => {
+      try {
+        await fetchAllProducts();
         setMessage({
           type: "success",
-          text: `Edit request for product ${updatedData.id} has been submitted for approval.`,
+          text: `Edit request for ${updatedData.name} has been submitted.`,
+        });
+        setShowEditForm(false);
+      } catch (error) {
+        setMessage({
+          type: "error",
+          text: "Failed to submit edit request.",
         });
       }
     },
-    [editRequests, normalizedProducts]
+    [fetchAllProducts]
   );
 
-  const renderDataWithDiff = (productId, fieldName, originalValue) => {
-    const request = editRequests.find(
-      (req) => req.productId === productId && req.status === "pending_edit"
-    );
-    if (request && request.newData[fieldName] !== originalValue) {
-      return (
-        <span className="flex flex-col">
-          <span className="line-through text-red-500">{originalValue}</span>
-          <span className="text-green-600 font-medium">
-            {request.newData[fieldName]}
-          </span>
-        </span>
-      );
-    }
-    return originalValue;
-  };
+  // Filter and paginate products
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product._id.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        filterStatus === "all" ||
+        product.status.toLowerCase() === filterStatus.toLowerCase();
+      const matchesActivity =
+        filterActivity === "all" ||
+        product.action.toLowerCase() === filterActivity.toLowerCase();
+      return matchesSearch && matchesStatus && matchesActivity;
+    });
+  }, [products, searchTerm, filterStatus, filterActivity]);
 
-  const renderActivityStatus = (productId, currentActivityStatus) => {
-    const activityRequest = activityRequests.find(
-      (req) => req.productId === productId && req.status === "pending_activity"
-    );
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
-    if (activityRequest) {
-      return (
-        <span className="flex flex-col items-center">
-          <span className="line-through text-red-500 text-xs">
-            {currentActivityStatus === "active" ? "Active" : "Inactive"}
-          </span>
-          <span className="text-green-600 font-medium text-xs">
-            {activityRequest.newActivityStatus === "active"
-              ? "Active"
-              : "Inactive"}
-          </span>
-        </span>
-      );
-    }
-
-    return (
-      <span
-        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-          currentActivityStatus === "active"
-            ? "bg-blue-100 text-blue-800"
-            : "bg-gray-100 text-gray-800"
-        }`}
-      >
-        {currentActivityStatus === "active" ? "Active" : "Inactive"}
-      </span>
-    );
-  };
+  // Get existing product names for validation
+  const existingProductNames = products.map((p) => p.name);
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
       <div className="bg-white rounded-xl shadow-lg p-6 space-y-6 max-w-7xl mx-auto">
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
           <div>
             <div className="flex items-center space-x-2 text-sm text-gray-600 mb-2">
@@ -352,6 +197,8 @@ const ProductList = () => {
             </h1>
           </div>
         </div>
+
+        {/* Messages */}
         {message.text && (
           <div
             className={`flex items-center p-4 rounded-lg border-l-4 ${
@@ -374,6 +221,8 @@ const ProductList = () => {
             <span>{message.text}</span>
           </div>
         )}
+
+        {/* Filters */}
         <div className="bg-gray-50 p-4 rounded-lg shadow-inner border border-gray-200">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="relative flex-grow">
@@ -414,6 +263,8 @@ const ProductList = () => {
             </div>
           </div>
         </div>
+
+        {/* Product Table */}
         <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
@@ -427,7 +278,6 @@ const ProductList = () => {
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">
                   Product Name
                 </th>
-                {/* Đã xóa cột Product ID */}
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">
                   Category
                 </th>
@@ -460,129 +310,114 @@ const ProductList = () => {
                   </td>
                 </tr>
               ) : paginatedProducts.length > 0 ? (
-                paginatedProducts.map((p, index) => {
-                  const hasPendingRequest =
-                    editRequests.some(
-                      (req) =>
-                        req.productId === p.id && req.status === "pending_edit"
-                    ) ||
-                    activityRequests.some(
-                      (req) =>
-                        req.productId === p.id &&
-                        req.status === "pending_activity"
-                    );
-
-                  const isActionDisabled =
-                    p.status !== "approved" || hasPendingRequest;
-
-                  return (
-                    <tr key={p.id} className="hover:bg-gray-100">
-                      <td className="px-4 py-3">
-                        {index + 1 + (currentPage - 1) * ITEMS_PER_PAGE}
-                      </td>
-                      <td className="px-4 py-3">
-                        <img
-                          src={p.imageUrl}
-                          alt={p.name}
-                          className="w-12 h-12 object-cover rounded-md border border-gray-200"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src =
-                              "https://placehold.co/100x100/A0B9C9/000?text=No+Image";
-                          }}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        {renderDataWithDiff(p.id, "name", p.name)}
-                      </td>
-                      {/* Hiển thị tên Category */}
-                      <td className="px-4 py-3">
-                        {renderDataWithDiff(
-                          p.id,
-                          "categoryName",
-                          p.categoryName
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {renderDataWithDiff(
-                          p.id,
-                          "minStorageTemp",
-                          p.minStorageTemp
-                        )}
-                        °C -{" "}
-                        {renderDataWithDiff(
-                          p.id,
-                          "maxStorageTemp",
-                          p.maxStorageTemp
-                        )}
-                        °C
-                      </td>
-                      <td className="px-4 py-3">
-                        {renderDataWithDiff(p.id, "density", p.density)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            p.status === "approved"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-yellow-100 text-yellow-800"
+                paginatedProducts.map((product, index) => (
+                  <tr key={product._id}>
+                    <td className="px-4 py-3">
+                      {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                    </td>
+                    <td className="px-4 py-3">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="h-12 w-12 object-cover rounded"
+                      />
+                    </td>
+                    <td className="px-4 py-3">{product.name}</td>
+                    <td className="px-4 py-3">{product.category?.name}</td>
+                    <td className="px-4 py-3">
+                      {product.storageTemperature?.min}°C -{" "}
+                      {product.storageTemperature?.max}°C
+                    </td>
+                    <td className="px-4 py-3">{product.density}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          product.status === "APPROVED"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {product.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          product.action === "ACTIVE"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-200 text-gray-500"
+                        }`}
+                      >
+                        {product.action === "ACTIVE" ? "ACTIVE" : "INACTIVE"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex justify-center gap-2">
+                        {/* Edit button */}
+                        <button
+                          onClick={() =>
+                            handleEditProduct(product._id, product.status)
+                          }
+                          disabled={
+                            product.status !== "APPROVED" ||
+                            product.pendingChanges ||
+                            loading
+                          }
+                          className={`p-2 rounded-full ${
+                            product.status !== "APPROVED" ||
+                            product.pendingChanges ||
+                            loading
+                              ? "text-gray-400 cursor-not-allowed"
+                              : "text-blue-600 hover:bg-blue-100"
                           }`}
+                          title={
+                            product.status !== "APPROVED"
+                              ? "Product must be approved first"
+                              : product.pendingChanges
+                              ? "Cannot edit while changes are pending"
+                              : "Edit product"
+                          }
                         >
-                          {p.status === "approved" ? "Approved" : "Pending"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {renderActivityStatus(p.id, p.activityStatus)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => handleEditProduct(p.id, p.status)}
-                            disabled={isActionDisabled}
-                            className={`p-2 rounded-full ${
-                              isActionDisabled
-                                ? "text-gray-400 cursor-not-allowed"
-                                : "text-blue-600 hover:bg-blue-100"
-                            }`}
-                            title={
-                              isActionDisabled
-                                ? "Cannot edit while not approved or pending requests exist"
-                                : "Edit product"
-                            }
-                          >
-                            <Edit className="size-4" />
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleChangeActivityStatus(
-                                p.id,
-                                p.activityStatus,
-                                p.status
-                              )
-                            }
-                            disabled={isActionDisabled}
-                            className={`p-2 rounded-full ${
-                              isActionDisabled
-                                ? "text-gray-400 cursor-not-allowed"
-                                : "text-green-600 hover:bg-green-100"
-                            }`}
-                            title={
-                              isActionDisabled
-                                ? "Cannot change activity while not approved or pending requests exist"
-                                : "Toggle activity status"
-                            }
-                          >
-                            {p.activityStatus === "active" ? (
-                              <ToggleRight className="size-4" />
-                            ) : (
-                              <ToggleLeft className="size-4" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                          <Edit className="size-4" />
+                        </button>
+
+                        {/* Toggle activity button */}
+                        <button
+                          onClick={() => handleChangeActivityStatus(product)}
+                          disabled={
+                            product.status !== "APPROVED" ||
+                            product.pendingChanges ||
+                            loading
+                          }
+                          className={`p-2 rounded-full ${
+                            product.status !== "APPROVED" ||
+                            product.pendingChanges ||
+                            loading
+                              ? "text-gray-400 cursor-not-allowed"
+                              : "text-blue-600 hover:bg-blue-100"
+                          }`}
+                          title={
+                            product.status !== "APPROVED"
+                              ? "Product must be approved first"
+                              : product.pendingChanges
+                              ? "Cannot change while changes are pending"
+                              : loading
+                              ? "Processing..."
+                              : "Toggle activity status"
+                          }
+                        >
+                          {loading ? (
+                            <span className="animate-spin">⌛</span>
+                          ) : product.action === "ACTIVE" ? (
+                            <ToggleRight className="size-4" />
+                          ) : (
+                            <ToggleLeft className="size-4" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               ) : (
                 <tr>
                   <td
@@ -597,6 +432,8 @@ const ProductList = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 mt-6">
             <button
@@ -626,6 +463,8 @@ const ProductList = () => {
             </button>
           </div>
         )}
+
+        {/* Modals */}
         {showCreateForm && (
           <CreateProduct
             onClose={() => setShowCreateForm(false)}
@@ -634,19 +473,18 @@ const ProductList = () => {
                 type: "success",
                 text: `Product has been created and is pending approval.`,
               });
-              fetchAllProducts(); // Thêm dòng này để load lại danh sách sản phẩm
+              fetchAllProducts();
+              setShowCreateForm(false);
             }}
             existingProductNames={existingProductNames}
             categories={categories}
           />
         )}
+
         {showEditForm && editingProduct && (
           <EditProduct
             initialData={editingProduct}
-            onClose={() => {
-              setShowEditForm(false);
-              setEditingProduct(null);
-            }}
+            onClose={() => setShowEditForm(false)}
             onSubmit={handleEditRequestSubmit}
             existingProductNames={existingProductNames.filter(
               (name) => name !== editingProduct.name
@@ -657,6 +495,5 @@ const ProductList = () => {
     </div>
   );
 };
-
 
 export default ProductList;
