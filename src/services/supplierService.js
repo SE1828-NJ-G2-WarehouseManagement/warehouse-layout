@@ -6,33 +6,32 @@ class SupplierService {
         this.url = "/suppliers";
     }
 
-    getSuppliersByApprove = async (dataParams) => {
+    approveSupplier = async (id) => {
+        try {
+            const response = await axiosInstance.put(`${this.url}/approve/${id}`, {
+                requiresAuth: true
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error in SupplierService.approveSupplier:", error);
+            message.error("Failed to approve supplier.");
+            throw error;
+        }
+    };
+
+    async getAllSuppliers(dataParams) {
         try {
             const response = await axiosInstance.get(`${this.url}/filter`, {
                 params: dataParams,
                 requiresAuth: true
             });
-            return response.data.data;
-        } catch (error) {
-            console.error("Error in SupplierService.getSuppliers:", error);
-            message.error("Failed to fetch suppliers.");
-            throw error;
-        }
-    };
-
-    getAllSuppliers = async (params = {}) => { 
-        try {
-            const response = await axiosInstance.get(`${this.url}/filter`, {
-                params: params, 
-                requiresAuth: true,
-            });
             return response.data;
         } catch (error) {
-            console.error("Error in SupplierService.getAllSuppliers:", error);
-            message.error("Failed to fetch all suppliers.");
-            throw error;
+            console.error("Error in CategoryService.getAllCategories:", error);
+            const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred while fetching categories. Please check network connectivity and backend server.";
+            throw new Error(errorMessage);
         }
-    };
+    }
 
 
     getPendingSuppliers = async () => {
@@ -57,20 +56,10 @@ class SupplierService {
         }
     }
 
-    approveSupplier = async (id) => {
-        try {
-            const response = await axiosInstance.put(`${this.url}/approve/${id}`);
-            return response.data;
-        } catch (error) {
-            console.error("Error in SupplierService.approveSupplier:", error);
-            message.error("Failed to approve supplier.");
-            throw error;
-        }
-    };
 
-    rejectSupplier = async (id, reason) => {
+    rejectSupplier = async (id, note) => {
         try {
-            const response = await axiosInstance.put(`${this.url}/reject/${id}`, { rejectedNote: reason });
+            const response = await axiosInstance.put(`${this.url}/reject/${id}`, { note });
             return response.data;
         } catch (error) {
             console.error("Error in SupplierService.rejectSupplier:", error);

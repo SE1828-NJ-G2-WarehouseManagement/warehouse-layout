@@ -10,6 +10,7 @@ const SupplierProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [pageIndex, setPageIndex] = useState(1);
     const [totalItem, setTotalItem] = useState(0);
+    const [pageSize, setPageSize] = useState(10);
     const [dataParams, setDataParams] = useState({
         page: 1,
         size: 10,
@@ -18,7 +19,7 @@ const SupplierProvider = ({ children }) => {
         name: ""
     });
     const supplierService = new SupplierService();
-    
+
     useEffect(() => {
         fetchAllSuppliers(dataParams);
     }, [dataParams]);
@@ -38,8 +39,8 @@ const SupplierProvider = ({ children }) => {
     const fetchAllSuppliers = async (params) => {
         setLoading(true); 
         try {
-            const response = await supplierService.getAllSuppliers(params); 
-            setAllSuppliers(response?.data);  
+            const response = await supplierService?.getAllSuppliers(params); 
+            setAllSuppliers(response?.suppliers);  
             setTotalItem(response?.total || 0); 
         } catch (error) {
             console.error("Error fetching all suppliers:", error);
@@ -86,9 +87,9 @@ const SupplierProvider = ({ children }) => {
         }
     }
 
-    const rejectSupplier = async (id) => {
+    const rejectSupplier = async (id,note) => {
         try {
-            const data = await supplierService.rejectSupplier(id);
+            const data = await supplierService.rejectSupplier(id,note);
             toast.success("Supplier rejected successfully!");
             await fetchAllSuppliers();
             return data;
@@ -100,7 +101,7 @@ const SupplierProvider = ({ children }) => {
     };
 
     return (
-        <SupplierContext.Provider value={{ fetchSupplierById, allSuppliers, pendingSuppliers, loading, fetchSuppliersByApprove, fetchPendingSuppliers, approveSupplier, rejectSupplier, fetchAllSuppliers, pageIndex, setPageIndex, totalItem, dataParams, setDataParams }}>
+        <SupplierContext.Provider value={{ fetchSupplierById, allSuppliers, pendingSuppliers, loading, fetchSuppliersByApprove, fetchPendingSuppliers, approveSupplier, rejectSupplier, fetchAllSuppliers, pageIndex, setPageIndex, totalItem, dataParams, setDataParams, pageSize, setPageSize }}>
             {children}
         </SupplierContext.Provider>
     );
