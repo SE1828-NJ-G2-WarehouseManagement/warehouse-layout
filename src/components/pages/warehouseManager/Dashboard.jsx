@@ -5,50 +5,20 @@ import {
 import {
     // These icons are now inline SVGs, no longer imported from lucide-react
 } from 'antd'; // Keeping Ant Design imports for Table, Card, Button, Modal, etc., if needed elsewhere, though not used in this specific Dashboard component.
+import ReportService from '../../../services/reportService';
 
-// --- Mock Data for Dashboard Statistics ---
-const mockDashboardStats = {
-  products: 1250,
-  imports: 320,
-  exports: 280,
-  expired: 15,
-  zones: 12,
-  filterByDate: (date) => {
-    // This is a simple mock filter. In a real app, this would query a backend.
-    if (!date) {
-      return {
-        products: 1250,
-        imports: 320,
-        exports: 280,
-        expired: 15,
-        zones: 12,
-      };
-    }
-    // Simulate data change based on date selection
-    const day = new Date(date).getDate();
-    return {
-      products: 1000 + day * 10,
-      imports: 250 + day * 5,
-      exports: 200 + day * 4,
-      expired: 10 + Math.floor(day / 7),
-      zones: 8 + Math.floor(day / 15),
-    };
+
+function formatDateToDDMMYYYY(dateString, date) {
+  if (!dateString && !date) return "";
+  if (!dateString) {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      return `${dd}/${mm}/${yyyy}`;
   }
-};
-
-const generateMonthlyData = () => {
-  const months = Array.from({ length: 12 }, (_, i) => {
-    const date = new Date(0, i); // Month index is 0-based
-    return new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);
-  });
-  return months.map(month => ({
-    month,
-    products: Math.floor(Math.random() * 500) + 100,
-    imports: Math.floor(Math.random() * 100) + 20,
-    exports: Math.floor(Math.random() * 80) + 10,
-    expired: Math.floor(Math.random() * 20) + 1,
-  }));
-};
+  const [year, month, day] = dateString.split('-') || '';
+  return `${day}/${month}/${year}`;
+}
 
 // Inline SVG Icons (equivalent to lucide-react icons)
 const PackageIcon = ({ size = 24, strokeWidth = 2 }) => (
@@ -113,6 +83,7 @@ const LayoutGridIcon = ({ size = 24, strokeWidth = 2 }) => (
 
 
 const MonthlyBarChart = ({ data, dataKey, name, color, title }) => (
+  
   <div className="bg-white p-6 rounded-2xl shadow-lg">
     <h3 className="text-lg font-semibold text-gray-800 mb-4">{title}</h3>
     <ResponsiveContainer width="100%" height={250}>
@@ -133,7 +104,10 @@ const MonthlyBarChart = ({ data, dataKey, name, color, title }) => (
 );
 
 const Dashboard = () => {
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // YYYY-MM-DD
+  });
   const [filteredStats, setFilteredStats] = useState({
     products: 0,
     imports: 0,
@@ -142,24 +116,18 @@ const Dashboard = () => {
     zones: 0,
   });
   const [monthlyStats, setMonthlyStats] = useState([]);
+  const reportService = new ReportService();
+
+  const getReports = async () => {
+    const date = formatDateToDDMMYYYY(selectedDate, new Date());
+    const data = await reportService.getReports(date);
+    setFilteredStats(data.totalAnalysis);
+    setMonthlyStats(data.monthlyAnalysis);
+  }
 
   useEffect(() => {
-    // Use the local mockDashboardStats
-    const stats = mockDashboardStats.filterByDate
-      ? mockDashboardStats.filterByDate(selectedDate)
-      : {
-          products: 100,
-          imports: 20,
-          exports: 10,
-          expired: 5,
-          zones: 8,
-        };
-    setFilteredStats(stats);
+    getReports();
   }, [selectedDate]);
-
-  useEffect(() => {
-    setMonthlyStats(generateMonthlyData());
-  }, []);
 
   return (
     <div className="space-y-8 p-6">
