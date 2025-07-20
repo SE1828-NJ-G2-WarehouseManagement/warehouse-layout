@@ -204,7 +204,7 @@ const SupplierList = () => {
             fetchSuppliers();
 
             setMessage({ type: 'success', text: `Supplier ${createdSupplier._id} created and awaiting approval.` });
-            setShowCreateForm(false);
+            // setShowCreateForm(false);
         } catch (e) {
             console.error("Failed to create supplier:", e);
             throw e;
