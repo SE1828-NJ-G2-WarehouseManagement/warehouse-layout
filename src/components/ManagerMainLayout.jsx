@@ -20,6 +20,7 @@ import ImportExportHistory from './pages/warehouseManager/ImportExportHistory';
 import { ZoneProvider } from '../context/ZoneContext';
 import { SupplierProvider } from '../context/SupplierContext';
 import { CategoryProvider } from '../context/CategoryContext';
+import { ProductProvider } from "../context/ProductContext";
 
 
 const formatKeyForDisplay = (key) => {
@@ -87,7 +88,10 @@ const ManagerMainLayout = () => {
     <div className="min-h-screen bg-gray-50 flex">
       {notification && (
         <div className="fixed top-4 right-4 z-[1000]">
-          <Notification notification={notification} onClose={() => setNotification(null)} />
+          <Notification
+            notification={notification}
+            onClose={() => setNotification(null)}
+          />
         </div>
       )}
 
@@ -99,15 +103,15 @@ const ManagerMainLayout = () => {
           setCurrentSelectedKey(key);
           setDisplaySelectedKey(formatKeyForDisplay(key));
           const keyToPath = {
-            dashboard: '/dashboard',
-            zones: '/zone-management',
-            importExportHistory: '/import-export',
-            incomingShipment: '/incoming-shipment',
-            supplierManagement: '/suppliers-management',
-            productManagement: '/product-management',
-            categoriesManagement: '/categories-management',
-            profile: '/profile',
-            settings: '/settings',
+            dashboard: "/dashboard",
+            zones: "/zone-management",
+            importExportHistory: "/import-export",
+            incomingShipment: "/incoming-shipment",
+            supplierManagement: "/suppliers-management",
+            productManagement: "/product-management",
+            categoriesManagement: "/categories-management",
+            profile: "/profile",
+            settings: "/settings",
           };
           if (keyToPath[key]) {
             navigate(keyToPath[key]);
@@ -130,23 +134,42 @@ const ManagerMainLayout = () => {
           <Routes>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<ManagerDashboard />} />
-            <Route path="zone-management" element={
-              <ZoneProvider>
-                <ZoneManagement />
-              </ZoneProvider>
-            } />
-            <Route path="suppliers-management" element={
-              <SupplierProvider>
-                <SupplierManagement />
-              </SupplierProvider>
-            } />
-            <Route path="categories-management" element={
-              <CategoryProvider>
-                <CategoryManagement />
-              </CategoryProvider>
-            } />
-            <Route path="product-management" element={<ProductManagement />} />
-            <Route path="incoming-shipment" element={<IncomingShipmentsApproval />} />
+            <Route
+              path="zone-management"
+              element={
+                <ZoneProvider>
+                  <ZoneManagement />
+                </ZoneProvider>
+              }
+            />
+            <Route
+              path="suppliers-management"
+              element={
+                <SupplierProvider>
+                  <SupplierManagement />
+                </SupplierProvider>
+              }
+            />
+            <Route
+              path="categories-management"
+              element={
+                <CategoryProvider>
+                  <CategoryManagement />
+                </CategoryProvider>
+              }
+            />
+            <Route
+              path="product-management"
+              element={
+                <ProductProvider>
+                  <ProductManagement />
+                </ProductProvider>
+              }
+            />
+            <Route
+              path="incoming-shipment"
+              element={<IncomingShipmentsApproval />}
+            />
             <Route path="import-export" element={<ImportExportHistory />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />

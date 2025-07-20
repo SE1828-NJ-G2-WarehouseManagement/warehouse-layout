@@ -1,241 +1,164 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useState, useContext } from "react";
 import {
-  Table, Card, Button, Input, Space, Typography, Tag,
-  Tooltip, message, Select, Pagination,
-  Form
-} from 'antd';
+  Table,
+  Card,
+  Button,
+  Input,
+  Space,
+  Typography,
+  Tag,
+  Tooltip,
+  message,
+  Select,
+  Pagination,
+  Form,
+} from "antd";
 import {
-  EyeOutlined, SearchOutlined, BoxPlotOutlined
-} from '@ant-design/icons';
-import dayjs from 'dayjs';
-
-// Import các component con đã tách
-import ProductRequestDetailsModal from './ProductRequestDetailsModal.jsx';
-import ProductRejectionReasonModal from './ProductRejectionReasonModal.jsx';
+  EyeOutlined,
+  SearchOutlined,
+  BoxPlotOutlined,
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+import { ProductContext } from "../../../../context/ProductContext";
+import ProductRequestDetailsModal from "./ProductRequestDetailsModal.jsx";
+import ProductRejectionReasonModal from "./ProductRejectionReasonModal.jsx";
 
 const { Title } = Typography;
 const { Option } = Select;
 
-// --- Mock Data (giữ nguyên trong file chính) ---
-const initialProductRequests = [
-  {
-    id: 'prod-req-001',
-    type: 'Create', // Request Type: Create, Update, Status Change
-    submittedBy: 'Warehouse Staff X',
-    dateSubmitted: '2025-06-22',
-    status: 'Pending', // Request Status: Pending, Approved, Rejected
-    productDetails: {
-      image: 'https://placehold.co/100x100/A2D9CE/000?text=Product+Img+1',
-      name: 'Smart Watch Pro',
-      category: 'Electronics',
-      storageTemp: '5-25',
-      density: '1.2 g/cm³',
-    },
-    rejectionReason: '',
-  },
-  {
-    id: 'prod-req-002',
-    type: 'Update',
-    submittedBy: 'Warehouse Staff Y',
-    dateSubmitted: '2025-06-21',
-    status: 'Pending',
-    productDetails: {
-      old: {
-        image: 'https://placehold.co/100x100/FAD02E/000?text=Old+Img',
-        name: 'Organic Coffee Beans',
-        category: 'Food & Beverage',
-        storageTemp: '10-20',
-        density: '0.4 g/cm³',
-      },
-      new: {
-        image: 'https://placehold.co/100x100/98C1D9/000?text=New+Img',
-        name: 'Organic Coffee Beans (New Harvest)',
-        category: 'Food & Beverage',
-        storageTemp: '10-20',
-        density: '0.45 g/cm³',
-      }
-    },
-    rejectionReason: '',
-  },
-  {
-    id: 'prod-req-003',
-    type: 'Status Change',
-    submittedBy: 'Warehouse Staff Z',
-    dateSubmitted: '2025-06-20',
-    status: 'Pending',
-    productDetails: {
-      name: 'Ergonomic Office Chair',
-      oldStatus: 'Available',
-      newStatus: 'Discontinued'
-    },
-    rejectionReason: '',
-  },
-  {
-    id: 'prod-req-004',
-    type: 'Create',
-    submittedBy: 'Warehouse Staff X',
-    dateSubmitted: '2025-06-19',
-    status: 'Approved',
-    productDetails: {
-      image: 'https://placehold.co/100x100/D0A2ED/000?text=Product+Img+4',
-      name: 'Bluetooth Headphones',
-      category: 'Audio',
-      storageTemp: '0-40',
-      density: '0.1 kg/m³',
-    },
-    rejectionReason: '',
-  },
-  {
-    id: 'prod-req-005',
-    type: 'Update',
-    submittedBy: 'Warehouse Staff Y',
-    dateSubmitted: '2025-06-18',
-    status: 'Rejected',
-    productDetails: {
-      old: {
-        image: 'https://placehold.co/100x100/FFD700/000?text=BottleOld',
-        name: 'Stainless Steel Water Bottle',
-        category: 'Kitchenware',
-        storageTemp: 'ambient',
-        density: '0.8 g/cm³'
-      },
-      new: {
-        image: 'https://placehold.co/100x100/FFD700/000?text=BottleNew',
-        name: 'Stainless Steel Water Bottle',
-        category: 'Kitchenware',
-        storageTemp: 'ambient',
-        density: '0.8 g/cm³'
-      }
-    },
-    rejectionReason: 'Stock update to zero without proper justification for discontinuation.',
-  },
-];
+const STATUS_COLOR = {
+  ACTIVE: "green",
+  INACTIVE: "gray",
+  PENDING: "gold",
+  APPROVED: "lime",
+  REJECTED: "red",
+};
+
+const TYPE_COLOR = {
+  CREATE: "blue",
+  UPDATE: "orange",
+  STATUS_CHANGE: "purple",
+};
 
 const ProductManagement = () => {
-  const [requests, setRequests] = useState([]); // All requests, for filtering/sorting
-  const [filteredRequests, setFilteredRequests] = useState([]); // Requests after filter/sort applied
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false); // For overall table loading
-  const [actionLoading, setActionLoading] = useState(false); // For approve/reject actions
+  const {
+    products,
+    loading,
+    fetchAllProducts,
+    getProductById,
+    approveProduct,
+    rejectProduct,
+  } = useContext(ProductContext);
+
+  const [mappedRequests, setMappedRequests] = useState([]);
+  const [filteredRequests, setFilteredRequests] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
   const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
   const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
   const [currentDisplayRequest, setCurrentDisplayRequest] = useState(null);
   const [rejectionForm] = Form.useForm();
 
-  // Pagination state (client-side for mock data)
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState('All');
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState('All');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState("All");
 
-  // --- Fetch Data (Simulated API Call) ---
+  // Fetch products from API via context
   useEffect(() => {
-    setLoading(true);
-    // Simulate API call to fetch product requests
-    setTimeout(() => {
-      setRequests(initialProductRequests); // Set all initial data
-      setTotalItems(initialProductRequests.length);
-      setLoading(false);
-    }, 500);
-  }, []); // Run once on component mount
+    fetchAllProducts();
+  }, [fetchAllProducts]);
 
-  // Helper function to get the display type
-  const getProductRequestDisplayType = useCallback((request) => {
-    // In a real API, `request.type` would likely be directly provided.
-    // For mock data, we infer it.
-    if (request.type) {
-        return request.type;
-    }
-    // Fallback for mock data if `type` isn't explicit
-    if (request.productDetails && (request.productDetails.oldStatus || request.productDetails.newStatus)) {
-        return 'Status Change';
-    }
-    if (request.productDetails && (request.productDetails.old && request.productDetails.new)) {
-        return 'Update';
-    }
-    return 'Create'; // Default
-  }, []);
+  // Map BE data to table data
+  useEffect(() => {
+    const mapped = products.map((item) => ({
+      id: item._id,
+      name: item.name,
+      category: item.category,
+      density: item.density,
+      image: item.image,
+      storageTemp: item.storageTemperature
+        ? `${item.storageTemperature.min}°C - ${item.storageTemperature.max}°C`
+        : "",
+      type: item.requestType || "",
+      submittedBy:
+        (item.requestType === "CREATE"
+          ? item.createdBy?.email
+          : item.updatedBy?.email) || "",
+      dateSubmitted: item.createdAt,
+      status: item.status || "",
+      action: item.action || "",
+      requestType: item.requestType || "",
+      rejectionReason: item.rejectedNote || "",
+      raw: item, // giữ lại để truyền cho modal nếu cần
+    }));
+    setMappedRequests(mapped);
+  }, [products]);
 
-  // --- Filtering and Sorting Logic ---
-  const applyFiltersAndSort = useCallback(() => {
-    let currentProcessedRequests = [...requests]; // Start with all requests
+  // Filtering, sorting, pagination
+  useEffect(() => {
+    let data = [...mappedRequests];
 
-    // Apply Search Term
+    // Search
     if (searchTerm) {
-      const lowerCaseSearchTerm = searchTerm.toLowerCase();
-      currentProcessedRequests = currentProcessedRequests.filter(request =>
-        request.id.toLowerCase().includes(lowerCaseSearchTerm) ||
-        getProductRequestDisplayType(request).toLowerCase().includes(lowerCaseSearchTerm) ||
-        request.submittedBy.toLowerCase().includes(lowerCaseSearchTerm) ||
-        request.status.toLowerCase().includes(lowerCaseSearchTerm) ||
-        (request.productDetails.name && request.productDetails.name.toLowerCase().includes(lowerCaseSearchTerm)) ||
-        (request.productDetails.category && request.productDetails.category.toLowerCase().includes(lowerCaseSearchTerm))
+      const lower = searchTerm.toLowerCase();
+      data = data.filter(
+        (item) =>
+          (item.id && item.id.toLowerCase().includes(lower)) ||
+          (item.name && item.name.toLowerCase().includes(lower)) ||
+          (item.category && item.category.toLowerCase().includes(lower)) ||
+          (item.status && item.status.toLowerCase().includes(lower)) ||
+          (item.type && item.type.toLowerCase().includes(lower)) ||
+          (item.submittedBy && item.submittedBy.toLowerCase().includes(lower))
       );
     }
 
-    // Apply Status Filter
-    if (selectedStatusFilter !== 'All') {
-      currentProcessedRequests = currentProcessedRequests.filter(request =>
-        request.status.toUpperCase() === selectedStatusFilter.toUpperCase()
+    // Status filter
+    if (selectedStatusFilter !== "All") {
+      data = data.filter(
+        (item) => item.status && item.status === selectedStatusFilter
       );
     }
 
-    // Apply Type Filter
-    if (selectedTypeFilter !== 'All') {
-      currentProcessedRequests = currentProcessedRequests.filter(request => {
-        const type = getProductRequestDisplayType(request);
-        return type.toUpperCase() === selectedTypeFilter.toUpperCase();
-      });
+    // Type filter
+    if (selectedTypeFilter !== "All") {
+      data = data.filter(
+        (item) => item.type && item.type === selectedTypeFilter
+      );
     }
 
-    // Sorting Logic: PENDING first, then APPROVED, then REJECTED.
-    // Within each group, sort by dateSubmitted (most recent first).
-    currentProcessedRequests.sort((a, b) => {
-        const statusOrder = { 'PENDING': 1, 'APPROVED': 2, 'REJECTED': 3 };
-        const statusA = statusOrder[a.status.toUpperCase()] || 99; // Default high priority for unknown statuses
-        const statusB = statusOrder[b.status.toUpperCase()] || 99;
-
-        if (statusA !== statusB) {
-            return statusA - statusB; // Sort by status priority
-        }
-        // If statuses are the same, sort by dateSubmitted descending
-        return dayjs(b.dateSubmitted).diff(dayjs(a.dateSubmitted));
+    // Sort: PENDING > APPROVED > REJECTED > ACTIVE > INACTIVE, mới nhất lên đầu
+    const statusOrder = {
+      PENDING: 1,
+      APPROVED: 2,
+      REJECTED: 3,
+      ACTIVE: 4,
+      INACTIVE: 5,
+    };
+    data.sort((a, b) => {
+      const sa = statusOrder[a.status] || 99;
+      const sb = statusOrder[b.status] || 99;
+      if (sa !== sb) return sa - sb;
+      return dayjs(b.dateSubmitted).diff(dayjs(a.dateSubmitted));
     });
 
-    setTotalItems(currentProcessedRequests.length); // Update total items for pagination after filters/sort
+    setTotalItems(data.length);
 
-    // Apply Pagination (client-side for mock data)
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const paginatedData = currentProcessedRequests.slice(startIndex, endIndex);
-
-    setFilteredRequests(paginatedData);
+    // Pagination
+    const start = (currentPage - 1) * pageSize;
+    setFilteredRequests(data.slice(start, start + pageSize));
   }, [
-    requests, // Dependency on raw data
-    searchTerm,
-    selectedStatusFilter,
-    selectedTypeFilter,
-    currentPage, // Dependency for pagination
-    pageSize, // Dependency for pagination
-    getProductRequestDisplayType // Helper function dependency
-  ]);
-
-  // Re-apply filters and sort whenever relevant state changes
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [
-    requests,
+    mappedRequests,
     searchTerm,
     selectedStatusFilter,
     selectedTypeFilter,
     currentPage,
     pageSize,
-    applyFiltersAndSort
   ]);
 
-  // --- Modal Handlers ---
+  // Modal handlers
   const handleDetailsModalCancel = () => {
     setIsDetailsModalVisible(false);
     setCurrentDisplayRequest(null);
@@ -251,153 +174,214 @@ const ProductManagement = () => {
     rejectionForm.resetFields();
   };
 
-  const handleApproveRequest = async () => {
-    if (!currentDisplayRequest) return;
+  // Xử lý khi ấn Review
+const handleReview = async (record) => {
+  setActionLoading(true);
+  try {
+    const detail = await getProductById(record.id);
 
-    setActionLoading(true);
-    try {
-      // Simulate API call to approve request
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-      setRequests(prev => { // Update the main 'requests' state
-        const updated = prev.map(req =>
-          req.id === currentDisplayRequest.id ? { ...req, status: 'Approved' } : req
-        );
-        return updated;
-      });
-      message.success(`Product request ${currentDisplayRequest.id} approved successfully!`);
-      handleDetailsModalCancel();
-      // Re-trigger filtering and sorting via useEffect after state update
-    } catch (error) {
-      console.error('Failed to approve request:', error);
-      message.error('Failed to approve request. Please try again.');
-    } finally {
-      setActionLoading(false);
+    // Thêm log để kiểm tra dữ liệu trả về từ BE
+    console.log("Chi tiết sản phẩm từ BE:", detail);
+        console.log("Chi tiết sản phẩm từ Pending:", detail.pendingChanges);
+
+
+    // Helper: lấy name nếu là object, còn không thì giữ nguyên
+    const getName = (val) => {
+      if (!val) return "";
+      if (typeof val === "string") return val;
+      if (typeof val === "object" && val.name) return val.name;
+      return "";
+    };
+
+    let modalData = {
+      id: detail._id,
+      submittedBy:
+        (detail.requestType === "CREATE"
+          ? detail.createdBy?.email
+          : detail.updatedBy?.email) || "",
+      dateSubmitted: detail.createdAt,
+      type: detail.requestType || "",
+      status: detail.action || "",
+      rejectionReason: detail.rejectedNote || "",
+    };
+
+    if (detail.requestType === "CREATE") {
+      modalData.productDetails = {
+        image: detail.image,
+        name: getName(detail.name),
+        category: getName(detail.category),
+        storageTemp: detail.storageTemperature
+          ? `${detail.storageTemperature.min}°C - ${detail.storageTemperature.max}°C`
+          : "",
+        density: detail.density,
+      };
+    } else if (detail.requestType === "UPDATE") {
+      const pending = detail.pendingChanges;
+      modalData.productDetails = {
+        old: {
+          image: detail.image,
+          name: getName(detail.name),
+          category: getName(detail.category),
+          storageTemp: detail.storageTemperature
+            ? `${detail.storageTemperature.min}°C - ${detail.storageTemperature.max}°C`
+            : "",
+          density: detail.density,
+        },
+        new: {
+          image: pending.image,
+          name: getName(pending.name),
+          category: getName(pending.category),
+          storageTemp: pending.storageTemperature
+            ? `${pending.storageTemperature.min}°C - ${pending.storageTemperature.max}°C`
+            : "",
+          density: pending.density,
+        },
+      };
+    } else if (detail.requestType === "STATUS_CHANGE") {
+      const pending = detail.pendingChanges;
+      modalData.productDetails = {
+        name: getName(pending.name) || getName(detail.name),
+        oldStatus: detail.action,
+        newStatus: pending.action,
+      };
     }
-  };
 
-  const handleRejectRequest = async (values) => {
-    if (!currentDisplayRequest) return;
+    setCurrentDisplayRequest(modalData);
+    setIsDetailsModalVisible(true);
+  } catch (error) {
+    message.error("Failed to load product details.");
+  } finally {
+    setActionLoading(false);
+  }
+};
 
-    setActionLoading(true);
-    try {
-      // Simulate API call to reject request
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-      setRequests(prev => { // Update the main 'requests' state
-        const updated = prev.map(req =>
-          req.id === currentDisplayRequest.id ? { ...req, status: 'Rejected', rejectionReason: values.reason } : req
-        );
-        return updated;
-      });
-      message.success(`Product request ${currentDisplayRequest.id} rejected.`);
-      handleRejectModalCancel();
-      handleDetailsModalCancel(); // Close details modal after rejection
-      // Re-trigger filtering and sorting via useEffect after state update
-    } catch (error) {
-      console.error('Failed to reject request:', error);
-      message.error('Failed to reject request. Please try again.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
+ const handleApproveRequest = async () => {
+   if (!currentDisplayRequest) return;
+   setActionLoading(true);
+   try {
+     await approveProduct(currentDisplayRequest.id);
+     message.success("Approved successfully!");
+     handleDetailsModalCancel();
+     // reload list nếu cần
+   } catch (error) {
+     message.error("Failed to approve request.");
+   } finally {
+     setActionLoading(false);
+   }
+ };
 
-  // --- Table Columns ---
+ const handleRejectRequest = async (values) => {
+   if (!currentDisplayRequest) return;
+   setActionLoading(true);
+   try {
+     await rejectProduct(currentDisplayRequest.id, values.reason);
+     message.success("Rejected successfully!");
+     handleRejectModalCancel();
+     handleDetailsModalCancel();
+     // reload list nếu cần
+   } catch (error) {
+     message.error("Failed to reject request.");
+   } finally {
+     setActionLoading(false);
+   }
+ };
+const STATUS_COLOR = {
+  APPROVED: "green",
+  REJECTED: "red",
+  PENDING: "gold",
+};
+const ACTION_COLOR = {
+  ACTIVE: "blue",
+  INACTIVE: "gray",
+};
+
+  // Table columns
   const columns = [
     {
-      title: 'No.', // Serial Number
-      key: 'serialNo',
+      title: "No.",
+      key: "serialNo",
       render: (text, record, index) => (currentPage - 1) * pageSize + index + 1,
-      width: '5%',
+      width: "5%",
     },
     {
-      title: 'Request ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: '15%',
+      title: "Product ID",
+      dataIndex: "id",
+      key: "id",
+      width: "15%",
     },
     {
-      title: 'Type',
-      dataIndex: 'type', // This will now directly use the `type` property from mock data
-      key: 'type',
-      width: '10%',
-      render: (type) => {
-        let color = 'blue';
-        if (type === 'Update') color = 'orange';
-        if (type === 'Status Change') color = 'purple';
-        return <Tag color={color}>{type.toUpperCase()}</Tag>;
-      },
+      title: "Type",
+      dataIndex: "type",
+      key: "type",
+      width: "12%",
+      render: (type) => <Tag color={TYPE_COLOR[type] || "default"}>{type}</Tag>,
     },
     {
-      title: 'Submitted By',
-      dataIndex: 'submittedBy',
-      key: 'submittedBy',
-      width: '20%',
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: "12%",
+      render: (status) => (
+        <Tag color={STATUS_COLOR[status] || "default"}>{status}</Tag>
+      ),
     },
     {
-      title: 'Date Submitted',
-      dataIndex: 'dateSubmitted',
-      key: 'dateSubmitted',
-      render: (date) => dayjs(date).format('DD/MM/YYYY'),
-      width: '15%',
+      title: "Submitted By",
+      dataIndex: "submittedBy",
+      key: "submittedBy",
+      width: "18%",
     },
     {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: '15%',
-      render: (status) => {
-        let color = 'default';
-        if (status === 'Pending') color = 'gold';
-        if (status === 'Approved') color = 'green';
-        if (status === 'Rejected') color = 'red';
-        return <Tag color={color}>{status.toUpperCase()}</Tag>;
-      },
+      title: "Date Submitted",
+      dataIndex: "dateSubmitted",
+      key: "dateSubmitted",
+      render: (date) => dayjs(date).format("DD/MM/YYYY"),
+      width: "13%",
     },
     {
-      title: 'Actions',
-      key: 'actions',
-      width: '20%',
+      title: "Action",
+      dataIndex: "action",
+      key: "action",
+      width: "12%",
+      render: (action) => (
+        <Tag color={ACTION_COLOR[action] || "default"}>{action}</Tag>
+      ),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      width: "15%",
       render: (_, record) => (
         <Space size="middle">
-          {record.status === 'Pending' && (
-            <Tooltip title="Review Request">
-              <Button
-                icon={<EyeOutlined />}
-                onClick={() => { setCurrentDisplayRequest(record); setIsDetailsModalVisible(true); }}
-                type="primary"
-                className="rounded-md"
-              >
-                Review
-              </Button>
-            </Tooltip>
-          )}
-          {record.status !== 'Pending' && (
-            <Tooltip title="View Details">
-              <Button
-                icon={<EyeOutlined />}
-                onClick={() => { setCurrentDisplayRequest(record); setIsDetailsModalVisible(true); }}
-                className="rounded-md"
-              >
-                View
-              </Button>
-            </Tooltip>
-          )}
+          <Tooltip title="View Details">
+            <Button
+              icon={<EyeOutlined />}
+              onClick={() => handleReview(record)}
+              className="rounded-md"
+              loading={actionLoading}
+            >
+              Review
+            </Button>
+          </Tooltip>
         </Space>
       ),
     },
   ];
 
   return (
-    <div className="container mx-auto p-6" style={{ maxWidth: '1200px' }}>
-      <Title level={2} style={{ marginBottom: 30 }}><BoxPlotOutlined /> Product Approval</Title>
+    <div className="container mx-auto p-6" style={{ maxWidth: "1200px" }}>
+      <Title level={2} style={{ marginBottom: 30 }}>
+        <BoxPlotOutlined /> Product Approval
+      </Title>
 
       <Card
         className="shadow-xl rounded-lg border border-gray-100 mb-8"
-        styles={{ body: { padding: '24px' } }}
+        styles={{ body: { padding: "24px" } }}
       >
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space direction="vertical" size="large" style={{ width: "100%" }}>
           <div className="flex flex-wrap gap-4 items-center">
             <Input
-              placeholder="Search by Request ID, Type, Submitted By, Status, Product Name or Category"
+              placeholder="Search by ID, name, category, status, type, submitted by..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ width: 400 }}
@@ -413,9 +397,11 @@ const ProductManagement = () => {
               value={selectedStatusFilter}
             >
               <Option value="All">All Statuses</Option>
-              <Option value="Pending">Pending</Option>
-              <Option value="Approved">Approved</Option>
-              <Option value="Rejected">Rejected</Option>
+              <Option value="ACTIVE">ACTIVE</Option>
+              <Option value="INACTIVE">INACTIVE</Option>
+              <Option value="PENDING">PENDING</Option>
+              <Option value="APPROVED">APPROVED</Option>
+              <Option value="REJECTED">REJECTED</Option>
             </Select>
             <Select
               defaultValue="All"
@@ -426,9 +412,9 @@ const ProductManagement = () => {
               value={selectedTypeFilter}
             >
               <Option value="All">All Types</Option>
-              <Option value="Create">Create</Option>
-              <Option value="Update">Update</Option>
-              <Option value="Status Change">Status Change</Option>
+              <Option value="CREATE">CREATE</Option>
+              <Option value="UPDATE">UPDATE</Option>
+              <Option value="STATUS_CHANGE">STATUS_CHANGE</Option>
             </Select>
           </div>
 
@@ -437,25 +423,23 @@ const ProductManagement = () => {
             dataSource={filteredRequests}
             rowKey="id"
             loading={loading || actionLoading}
-            pagination={false} // Tắt pagination mặc định của Ant Design
+            pagination={false}
             bordered
           />
-          {/* Custom Pagination */}
           <Pagination
             current={currentPage}
             onChange={(page, pageSize) => {
               setCurrentPage(page);
-              setPageSize(pageSize); // if showSizeChanger is true
+              setPageSize(pageSize);
             }}
             pageSize={pageSize}
             total={totalItems}
             align="end"
-            showSizeChanger={false} // Optionally allow changing page size
+            showSizeChanger={false}
           />
         </Space>
       </Card>
 
-      {/* Request Details Modal */}
       <ProductRequestDetailsModal
         visible={isDetailsModalVisible}
         currentRequest={currentDisplayRequest}

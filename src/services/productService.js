@@ -43,6 +43,77 @@ class ProductService {
       throw error;
     }
   }
+  async updateProduct(productData) {
+    try {
+      const response = await axiosInstance.put(
+        `${this.url}/${productData.id}`,
+        {
+          name: productData.name,
+          category: productData.category,
+          density: productData.density,
+          storageTemperature: {
+            min: productData.minStorageTemp,
+            max: productData.maxStorageTemp,
+          },
+          image: productData.image,
+          reason: productData.reason,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error in ProductService.updateProduct:", error);
+      throw error;
+    }
+  }
+  async getProductById(productId) {
+    try {
+      const response = await axiosInstance.get(`${this.url}/${productId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error in ProductService.getProductById:", error);
+      throw error;
+    }
+  }
+  async changeProductStatus(productId, action) {
+    try {
+      const response = await axiosInstance.put(
+        `${this.url}/${productId}/status`,
+        {
+          action,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error in ProductService.changeProductStatus:", error);
+      throw error;
+    }
+  }
+  async approveProduct(productId) {
+    try {
+      const response = await axiosInstance.put(
+        `/products/approve/${productId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error in ProductService.approveProduct:", error);
+      throw error;
+    }
+  }
+
+  async rejectProduct(productId, note) {
+    try {
+      const response = await axiosInstance.put(
+        `/products/reject/${productId}`,
+        { note }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error in ProductService.rejectProduct:", error);
+      throw error;
+    }
+  }
 }
+
+
 
 export default ProductService;

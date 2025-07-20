@@ -33,8 +33,17 @@ const ProductProvider = ({ children }) => {
    const createProduct = async (productData) => {
      return await productService.createProduct(productData);
    };
-
-
+const updateProduct = async (productData) => {
+  return await productService.updateProduct(productData);
+};
+ const getProductById = async (productId) => {
+   return await productService.getProductById(productId);
+ };
+  const changeProductStatus = async (productId, action) => {
+    return await productService.changeProductStatus(productId, action);
+  };
+const approveProduct = (id) => productService.approveProduct(id);
+const rejectProduct = (id, note) => productService.rejectProduct(id, note);
   useEffect(() => {
     fetchAllProducts(params);
   }, [fetchAllProducts, params]);
@@ -48,6 +57,11 @@ const ProductProvider = ({ children }) => {
         setParams,
         uploadProductImage,
         createProduct,
+        updateProduct,
+        getProductById,
+        changeProductStatus,
+        approveProduct,
+        rejectProduct,
       }}
     >
       {children}
