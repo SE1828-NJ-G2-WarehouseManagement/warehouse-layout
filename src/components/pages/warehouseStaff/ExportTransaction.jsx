@@ -12,7 +12,11 @@ import {
   Info,
   User,
   ShoppingCart,
+  Eye,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "antd";
+
 import axiosInstance from "../../../config/axios";
 
 const Notification = ({ notification }) => {
@@ -61,6 +65,7 @@ const Notification = ({ notification }) => {
 };
 
 const ExportTransaction = () => {
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [productsInStock, setProductsInStock] = useState([]);
 
@@ -356,11 +361,25 @@ const ExportTransaction = () => {
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      <div className="flex items-center space-x-3 mb-6">
+      {/* <div className="flex items-center space-x-3 mb-6">
         <Truck className="text-blue-600" size={28} />
         <h1 className="text-3xl font-bold text-gray-800">
           Create Outbound Order
         </h1>
+      </div> */}
+       <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center space-x-3">
+          <Truck className="text-blue-600" size={28} />
+          <h1 className="text-3xl font-bold text-gray-800">
+            Create Export Transaction
+          </h1>
+        </div>
+        <div>
+          <Button className="p-2" type="primary" onClick={() => navigate("/historyExport")}>
+            <Eye className="mr-1" size={20} />
+            View History Export
+          </Button>
+        </div>
       </div>
 
       <Notification notification={notification} />

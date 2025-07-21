@@ -18,6 +18,7 @@ import CategoryList from './pages/warehouseStaff/CategoryList';
 import CustomerList from './pages/warehouseStaff/CustomerList';
 import ProductList from './pages/warehouseStaff/ProductList';
 import ImportHistory from './pages/warehouseStaff/ImportHistory'; 
+import ExportHistory from './pages/warehouseStaff/ExportHistory'; 
 import { ProductProvider } from "../context/ProductContext";
 import { ZoneItemProvider } from "../context/ZoneItemContext";
 import { InternalTransferProvider } from "../context/InternalTransferContext";
@@ -170,6 +171,7 @@ const StaffMainLayout = () => {
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="historyImport" element={<ImportHistory />} />
+            <Route path="historyExport" element={<ExportHistory />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
         </main>
