@@ -154,9 +154,10 @@ const ZoneManagement = () => {
                 totalCapacity: values.totalCapacity,
             };
             const result = await updateZone(currentZone._id, payload);
-            await fetchZones();
+
             if (result.success) {
                 message.success("Zone updated successfully!");
+                await fetchZones();
                 setIsEditModalOpen(false);
                 setCurrentZone(null);
                 editForm.resetFields();
@@ -174,6 +175,7 @@ const ZoneManagement = () => {
             }
         }
     };
+
 
     const handleChangeStatus = async (record, checked) => {
         const newStatus = checked ? 'ACTIVE' : 'INACTIVE';
