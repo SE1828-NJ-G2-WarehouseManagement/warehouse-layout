@@ -39,6 +39,18 @@ const zoneItemService = {
       throw error;
     }
   },
+  async getItemByZoneId(zoneId, page = 1, pageSize = 10) {
+        try {
+            const response = await axiosInstance.get(`/zone-items/${zoneId}/items`, {
+                params: { page, pageSize }, 
+                requiresAuth: true,
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching items by zone ID:", error);
+            throw error;
+        }
+    }
 };
 
 export default zoneItemService;
