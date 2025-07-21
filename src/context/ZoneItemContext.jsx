@@ -7,6 +7,7 @@ const ZoneItemProvider = ({ children }) => {
   const [zoneItems, setZoneItems] = useState([]);
   const [productsInZone, setProductsInZone] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [zoneItemsTotal, setZoneItemsTotal] = useState(false);
   const [error, setError] = useState(null);
   const loadedWarehouseRef = useRef(null); // Track loaded warehouse
 
@@ -43,6 +44,23 @@ const ZoneItemProvider = ({ children }) => {
     setError(null);
   };
 
+  const getItemByZoneId = async (zoneId, page = 1, pageSize = 10) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await zoneItemService.getItemByZoneId(zoneId, page, pageSize);
+      setZoneItems(data?.data || []);
+      setZoneItemsTotal(data?.total || 0);
+      return data;
+    } catch (error) {
+      setError(error.message);
+      console.error("Error fetching items by zone ID:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <ZoneItemContext.Provider
       value={{
@@ -52,6 +70,8 @@ const ZoneItemProvider = ({ children }) => {
         error,
         getAllProductsInZone,
         resetProducts,
+        getItemByZoneId,
+        zoneItemsTotal
       }}
     >
       {children}
