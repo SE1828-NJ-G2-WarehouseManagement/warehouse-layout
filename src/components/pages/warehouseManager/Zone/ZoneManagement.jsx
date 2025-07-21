@@ -77,8 +77,8 @@ const ZoneManagement = () => {
         if (isEditModalOpen && currentZone) {
             editForm.setFieldsValue({
                 name: currentZone?.name,
-                storageTemperatureMin: typeof currentZone.storageTemperature?.min === 'number' ? currentZone.storageTemperature.min : null,
-                storageTemperatureMax: typeof currentZone.storageTemperature?.max === 'number' ? currentZone.storageTemperature.max : null,
+                storageTemperatureMin: typeof currentZone.storageTemperature?.min === 'number' ? currentZone?.storageTemperature.min : null,
+                storageTemperatureMax: typeof currentZone.storageTemperature?.max === 'number' ? currentZone?.storageTemperature.max : null,
                 totalCapacity: typeof currentZone.totalCapacity === 'number' ? currentZone.totalCapacity : null,
             });
         }
@@ -109,8 +109,8 @@ const ZoneManagement = () => {
             const payload = {
                 name: values.name,
                 storageTemperature: {
-                    min: values.storageTemperatureMin,
-                    max: values.storageTemperatureMax,
+                    min: values?.storageTemperatureMin,
+                    max: values?.storageTemperatureMax,
                 },
                 totalCapacity: values.totalCapacity,
             };
@@ -150,8 +150,8 @@ const ZoneManagement = () => {
             const payload = {
                 name: values.name,
                 storageTemperature: {
-                    min: values.storageTemperatureMin,
-                    max: values.storageTemperatureMax,
+                    min: values?.storageTemperatureMin,
+                    max: values?.storageTemperatureMax,
                 },
                 totalCapacity: values.totalCapacity,
             };
@@ -229,13 +229,17 @@ const ZoneManagement = () => {
         {
             title: 'Storage Temp (°C)',
             key: 'temperature',
-            render: (_, record) => `${record.storageTemperature?.min}°C - ${record.storageTemperature?.max}°C`,
+            render: (_, record) => `${record?.storageTemperature?.min}°C - ${record?.storageTemperature?.max}°C`,
             width: '15%',
         },
         {
             title: 'Capacity (Current/Total)',
             key: 'capacity',
-            render: (_, record) => `${record.currentCapacity}/${record.totalCapacity}`,
+            render: (_, record) => {
+                const current = Math.round(record?.currentCapacity || 0);
+                const total = Math.round(record?.totalCapacity || 0);
+                return `${current}/${total}`;
+            },
             width: '20%',
         },
         {
@@ -254,8 +258,8 @@ const ZoneManagement = () => {
             key: 'actions',
             width: '15%',
             render: (_, record) => {
-                const isZoneActive = record.status && record.status.toLowerCase() === 'active';
-                const hasGoods = record.currentCapacity > 0;
+                const isZoneActive = record?.status && record?.status?.toLowerCase() === 'active';
+                const hasGoods = record?.currentCapacity > 0;
 
                 return (
                     <Space size="small">
