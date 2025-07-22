@@ -40,6 +40,11 @@ const TYPE_COLOR = {
   STATUS_CHANGE: "purple",
 };
 
+const ACTION_COLOR = {
+  ACTIVE: "blue",
+  INACTIVE: "gray",
+};
+
 const ProductManagement = () => {
   const {
     products,
@@ -66,7 +71,6 @@ const ProductManagement = () => {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
   const [selectedTypeFilter, setSelectedTypeFilter] = useState("All");
 
-  // Fetch products from API via context
   useEffect(() => {
     fetchAllProducts();
   }, [fetchAllProducts]);
@@ -92,7 +96,7 @@ const ProductManagement = () => {
       action: item.action || "",
       requestType: item.requestType || "",
       rejectionReason: item.rejectedNote || "",
-      raw: item, // giữ lại để truyền cho modal nếu cần
+      raw: item,
     }));
     setMappedRequests(mapped);
   }, [products]);
@@ -100,35 +104,30 @@ const ProductManagement = () => {
   // Filtering, sorting, pagination
   useEffect(() => {
     let data = [...mappedRequests];
-
-    // Search
+    // Search theo name, submittedBy, date (DD/MM/YYYY)
     if (searchTerm) {
       const lower = searchTerm.toLowerCase();
       data = data.filter(
         (item) =>
-          (item.id && item.id.toLowerCase().includes(lower)) ||
           (item.name && item.name.toLowerCase().includes(lower)) ||
-          (item.category && item.category.toLowerCase().includes(lower)) ||
-          (item.status && item.status.toLowerCase().includes(lower)) ||
-          (item.type && item.type.toLowerCase().includes(lower)) ||
-          (item.submittedBy && item.submittedBy.toLowerCase().includes(lower))
+          (item.submittedBy &&
+            item.submittedBy.toLowerCase().includes(lower)) ||
+          (item.dateSubmitted &&
+            dayjs(item.dateSubmitted).format("DD/MM/YYYY").includes(lower))
       );
     }
-
     // Status filter
     if (selectedStatusFilter !== "All") {
       data = data.filter(
         (item) => item.status && item.status === selectedStatusFilter
       );
     }
-
     // Type filter
     if (selectedTypeFilter !== "All") {
       data = data.filter(
         (item) => item.type && item.type === selectedTypeFilter
       );
     }
-
     // Sort: PENDING > APPROVED > REJECTED > ACTIVE > INACTIVE, mới nhất lên đầu
     const statusOrder = {
       PENDING: 1,
@@ -175,50 +174,30 @@ const ProductManagement = () => {
   };
 
   // Xử lý khi ấn Review
-const handleReview = async (record) => {
-  setActionLoading(true);
-  try {
-    const detail = await getProductById(record.id);
-
-    // Thêm log để kiểm tra dữ liệu trả về từ BE
-    console.log("Chi tiết sản phẩm từ BE:", detail);
-        console.log("Chi tiết sản phẩm từ Pending:", detail.pendingChanges);
-
-
-    // Helper: lấy name nếu là object, còn không thì giữ nguyên
-    const getName = (val) => {
-      if (!val) return "";
-      if (typeof val === "string") return val;
-      if (typeof val === "object" && val.name) return val.name;
-      return "";
-    };
-
-    let modalData = {
-      id: detail._id,
-      submittedBy:
-        (detail.requestType === "CREATE"
-          ? detail.createdBy?.email
-          : detail.updatedBy?.email) || "",
-      dateSubmitted: detail.createdAt,
-      type: detail.requestType || "",
-      status: detail.action || "",
-      rejectionReason: detail.rejectedNote || "",
-    };
-
-    if (detail.requestType === "CREATE") {
-      modalData.productDetails = {
-        image: detail.image,
-        name: getName(detail.name),
-        category: getName(detail.category),
-        storageTemp: detail.storageTemperature
-          ? `${detail.storageTemperature.min}°C - ${detail.storageTemperature.max}°C`
-          : "",
-        density: detail.density,
+  const handleReview = async (record) => {
+    setActionLoading(true);
+    try {
+      const detail = await getProductById(record.id);
+      const getName = (val) => {
+        if (!val) return "";
+        if (typeof val === "string") return val;
+        if (typeof val === "object" && val.name) return val.name;
+        return "";
       };
-    } else if (detail.requestType === "UPDATE") {
-      const pending = detail.pendingChanges;
-      modalData.productDetails = {
-        old: {
+      let modalData = {
+        id: detail._id,
+        submittedBy:
+          (detail.requestType === "CREATE"
+            ? detail.createdBy?.email
+            : detail.updatedBy?.email) || "",
+        dateSubmitted: detail.createdAt,
+        type: detail.requestType || "",
+        status: detail.status || "",
+        action: detail.action || "",
+        rejectionReason: detail.rejectedNote || "",
+      };
+      if (detail.requestType === "CREATE") {
+        modalData.productDetails = {
           image: detail.image,
           name: getName(detail.name),
           category: getName(detail.category),
@@ -226,74 +205,74 @@ const handleReview = async (record) => {
             ? `${detail.storageTemperature.min}°C - ${detail.storageTemperature.max}°C`
             : "",
           density: detail.density,
-        },
-        new: {
-          image: pending.image,
-          name: getName(pending.name),
-          category: getName(pending.category),
-          storageTemp: pending.storageTemperature
-            ? `${pending.storageTemperature.min}°C - ${pending.storageTemperature.max}°C`
-            : "",
-          density: pending.density,
-        },
-      };
-    } else if (detail.requestType === "STATUS_CHANGE") {
-      const pending = detail.pendingChanges;
-      modalData.productDetails = {
-        name: getName(pending.name) || getName(detail.name),
-        oldStatus: detail.action,
-        newStatus: pending.action,
-      };
+        };
+      } else if (detail.requestType === "UPDATE") {
+        const pending = detail.pendingChanges;
+        modalData.productDetails = {
+          old: {
+            image: detail.image,
+            name: getName(detail.name),
+            category: getName(detail.category),
+            storageTemp: detail.storageTemperature
+              ? `${detail.storageTemperature.min}°C - ${detail.storageTemperature.max}°C`
+              : "",
+            density: detail.density,
+          },
+          new: {
+            image: pending.image,
+            name: getName(pending.name),
+            category: getName(pending.category),
+            storageTemp: pending.storageTemperature
+              ? `${pending.storageTemperature.min}°C - ${pending.storageTemperature.max}°C`
+              : "",
+            density: pending.density,
+          },
+        };
+      } else if (detail.requestType === "STATUS_CHANGE") {
+        const pending = detail.pendingChanges;
+        modalData.productDetails = {
+          name: getName(pending.name) || getName(detail.name),
+          oldStatus: detail.action,
+          newStatus: pending.action,
+        };
+      }
+      setCurrentDisplayRequest(modalData);
+      setIsDetailsModalVisible(true);
+    } catch (error) {
+      message.error("Failed to load product details.");
+    } finally {
+      setActionLoading(false);
     }
+  };
 
-    setCurrentDisplayRequest(modalData);
-    setIsDetailsModalVisible(true);
-  } catch (error) {
-    message.error("Failed to load product details.");
-  } finally {
-    setActionLoading(false);
-  }
-};
+  const handleApproveRequest = async () => {
+    if (!currentDisplayRequest) return;
+    setActionLoading(true);
+    try {
+      await approveProduct(currentDisplayRequest.id);
+      message.success("Approved successfully!");
+      handleDetailsModalCancel();
+    } catch (error) {
+      message.error("Failed to approve request.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
- const handleApproveRequest = async () => {
-   if (!currentDisplayRequest) return;
-   setActionLoading(true);
-   try {
-     await approveProduct(currentDisplayRequest.id);
-     message.success("Approved successfully!");
-     handleDetailsModalCancel();
-     // reload list nếu cần
-   } catch (error) {
-     message.error("Failed to approve request.");
-   } finally {
-     setActionLoading(false);
-   }
- };
-
- const handleRejectRequest = async (values) => {
-   if (!currentDisplayRequest) return;
-   setActionLoading(true);
-   try {
-     await rejectProduct(currentDisplayRequest.id, values.reason);
-     message.success("Rejected successfully!");
-     handleRejectModalCancel();
-     handleDetailsModalCancel();
-     // reload list nếu cần
-   } catch (error) {
-     message.error("Failed to reject request.");
-   } finally {
-     setActionLoading(false);
-   }
- };
-const STATUS_COLOR = {
-  APPROVED: "green",
-  REJECTED: "red",
-  PENDING: "gold",
-};
-const ACTION_COLOR = {
-  ACTIVE: "blue",
-  INACTIVE: "gray",
-};
+  const handleRejectRequest = async (values) => {
+    if (!currentDisplayRequest) return;
+    setActionLoading(true);
+    try {
+      await rejectProduct(currentDisplayRequest.id, values.reason);
+      message.success("Rejected successfully!");
+      handleRejectModalCancel();
+      handleDetailsModalCancel();
+    } catch (error) {
+      message.error("Failed to reject request.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // Table columns
   const columns = [
@@ -304,10 +283,20 @@ const ACTION_COLOR = {
       width: "5%",
     },
     {
-      title: "Product ID",
-      dataIndex: "id",
-      key: "id",
-      width: "15%",
+      title: "Product Name",
+      dataIndex: "name",
+      key: "name",
+      width: "18%",
+      render: (name, record) => (
+        <div className="flex items-center gap-2">
+          <img
+            src={record.image}
+            alt={name}
+            className="h-8 w-8 object-cover rounded"
+          />
+          <span>{name}</span>
+        </div>
+      ),
     },
     {
       title: "Type",
@@ -356,11 +345,12 @@ const ACTION_COLOR = {
           <Tooltip title="View Details">
             <Button
               icon={<EyeOutlined />}
+              type={record.status === "PENDING" ? "primary" : "default"}
               onClick={() => handleReview(record)}
               className="rounded-md"
               loading={actionLoading}
             >
-              Review
+              {record.status === "PENDING" ? "Review" : "View"}
             </Button>
           </Tooltip>
         </Space>
@@ -381,7 +371,7 @@ const ACTION_COLOR = {
         <Space direction="vertical" size="large" style={{ width: "100%" }}>
           <div className="flex flex-wrap gap-4 items-center">
             <Input
-              placeholder="Search by ID, name, category, status, type, submitted by..."
+              placeholder="Search by name, submitted by, date (DD/MM/YYYY)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ width: 400 }}
