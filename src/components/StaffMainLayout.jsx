@@ -23,6 +23,7 @@ import { ProductProvider } from "../context/ProductContext";
 import { useAuth } from '../hooks/useAuth';
 import Profile from './common/Profile';
 import Settings from './common/Settings';
+import Dashboard from './pages/warehouseManager/Dashboard';
 
 const StaffMainLayout = () => {
   const navigate = useNavigate();
@@ -126,7 +127,7 @@ const StaffMainLayout = () => {
         <main className="flex-1 p-6">
           <Routes>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<StaffDashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="importTransaction" element={<ImportTransaction />} />
             <Route path="exportTransaction" element={<ExportTransaction />} />
             <Route
