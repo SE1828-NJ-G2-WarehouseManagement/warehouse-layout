@@ -133,6 +133,7 @@ const ModalDetailZone = ({ isViewGoodsModalOpen, handleViewGoodsCancel, currentZ
                                 pageSize: zoneItemsPageSize,
                                 total: zoneItemsTotal,
                                 onChange: handlePaginationChange,
+                                key: `${zoneItemsPage}-${zoneItemsPageSize}`
                             }}
                             scroll={{ y: 'calc(100vh - 400px)' }} 
                             size="small"
