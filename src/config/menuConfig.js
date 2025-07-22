@@ -12,8 +12,8 @@ import {
   FileText,
   Factory,
   Tags,
-  CheckCircle,
-  ClipboardList
+  Download,
+  Upload
 } from 'lucide-react';
 
 export const getMenuItems = (role) => {
@@ -41,7 +41,8 @@ export const getMenuItems = (role) => {
       { key: 'categoriesManagement', icon: Tags, label: 'Category Management', path: '/categories-management' },
       // { key: 'reports', icon: BarChart3, label: 'Reports & Analytics', path: '/reports' },
       { key: 'incomingShipment', icon: AlertTriangle, label: 'Incoming Shipment', path: '/incoming-shipment' },
-      { key: 'importExportHistory', icon: Package, label: 'Import/Export History', path: '/import-export' },
+      { key: 'importHistory', icon: Download, label: 'Import History', path: '/import-history' },
+      { key: 'exportHistory', icon: Upload, label: 'Export History', path: '/export-history' },
     ];
   }
   // Logic cho vai trò 'Warehouse Staff'
@@ -58,6 +59,7 @@ export const getMenuItems = (role) => {
       { key: 'expired', icon: AlertTriangle, label: 'Expired Products List', path: '/expiredProductsList' },
       { key: 'transferZone', icon: ArrowRightLeft, label: 'Zone-to-Zone Transfer', path: '/internalZoneTransfer' },
       { key: 'transferWarehouse', icon: ArrowRightLeft, label: 'Warehouse-to-Warehouse Transfer', path: '/internalWarehouseTransfer' }
+
     ];
   }
   return commonItems; 
