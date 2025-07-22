@@ -16,7 +16,8 @@ import SupplierManagement from './pages/warehouseManager/Supplier/SupplierManage
 import CategoryManagement from './pages/warehouseManager/Category/CategoryManagement';
 import ProductManagement from './pages/warehouseManager/Product/ProductManagement';
 import IncomingShipmentsApproval from './pages/warehouseManager/IncomingShipmentsApproval';
-import ImportExportHistory from './pages/warehouseManager/ImportExportHistory';
+import ExportHistory from './pages/warehouseManager/ImportExportHistory/ExportHistory';
+import ImportHistory from './pages/warehouseManager/ImportExportHistory/ImportHistory';
 import { ZoneProvider } from '../context/ZoneContext';
 import { SupplierProvider } from '../context/SupplierContext';
 import { CategoryProvider } from '../context/CategoryContext';
@@ -46,7 +47,8 @@ const ManagerMainLayout = () => {
     const pathToKey = {
       '/dashboard': 'dashboard',
       '/zone-management': 'zones',
-      '/import-export': 'importExportHistory',
+      '/import-history': 'importHistory', 
+      '/export-history': 'exportHistory',
       '/incoming-shipment': 'incomingShipment',
       '/suppliers-management': 'supplierManagement',
       '/product-management': 'productManagement',
@@ -105,7 +107,8 @@ const ManagerMainLayout = () => {
           const keyToPath = {
             dashboard: "/dashboard",
             zones: "/zone-management",
-            importExportHistory: "/import-export",
+            importHistory: "/import-history",
+            exportHistory: "/export-history",
             incomingShipment: "/incoming-shipment",
             supplierManagement: "/suppliers-management",
             productManagement: "/product-management",
@@ -170,7 +173,8 @@ const ManagerMainLayout = () => {
               path="incoming-shipment"
               element={<IncomingShipmentsApproval />}
             />
-            <Route path="import-export" element={<ImportExportHistory />} />
+            <Route path="import-history" element={<ImportHistory />} />
+            <Route path="export-history" element={<ExportHistory />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
