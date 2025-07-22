@@ -52,11 +52,10 @@ class ProductService {
           category: productData.category,
           density: productData.density,
           storageTemperature: {
-            min: productData.minStorageTemp,
-            max: productData.maxStorageTemp,
+            min: productData.storageTemperature?.min,
+            max: productData.storageTemperature?.max,
           },
           image: productData.image,
-          reason: productData.reason,
         }
       );
       return response.data;

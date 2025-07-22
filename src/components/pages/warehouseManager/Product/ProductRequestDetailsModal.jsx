@@ -64,7 +64,6 @@ const ProductRequestDetailsModal = ({
   }
 
   if (!currentRequest) return null;
-
   return (
     <Modal
       title={
@@ -111,11 +110,11 @@ const ProductRequestDetailsModal = ({
                 {dayjs(currentRequest.dateSubmitted).format("DD/MM/YYYY")}
               </Descriptions.Item>
               <Descriptions.Item
-                label={<Text strong>Current Status</Text>}
+                label={<Text strong>Current Action</Text>}
                 span={2}
               >
-                <Tag color={STATUS_COLOR[currentRequest.status] || "default"}>
-                  {currentRequest.status}
+                <Tag color={STATUS_COLOR[currentRequest.action] || "default"}>
+                  {currentRequest.action}
                 </Tag>
               </Descriptions.Item>
             </Descriptions>
@@ -315,7 +314,7 @@ const ProductRequestDetailsModal = ({
         </div>
 
         {/* Actions for Pending Requests */}
-        {currentRequest?.status !== "APPROVED" && (
+        {currentRequest?.status === "PENDING" && (
           <div className="flex justify-end mt-8 space-x-4 p-4 bg-white border-t border-gray-200">
             <Popconfirm
               title="Approve Request?"

@@ -11,6 +11,7 @@ import { useZones } from '../../../../hooks/useZones.js';
 import ModalDetailZone from './ModalDetailZone.jsx';
 import ModalCreateZone from './ModalCreateZone.jsx';
 import ModalEditZone from './ModalEditZone.jsx';
+import { ZoneItemProvider } from '../../../../context/ZoneItemContext.jsx';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -23,6 +24,7 @@ const ZoneManagement = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isViewGoodsModalOpen, setIsViewGoodsModalOpen] = useState(false);
     const [currentZone, setCurrentZone] = useState(null);
+    // eslint-disable-next-line no-unused-vars
     const [goodsSearchTerm, setGoodsSearchTerm] = useState('');
     const [createForm] = Form.useForm();
     const [editForm] = Form.useForm();
@@ -75,8 +77,8 @@ const ZoneManagement = () => {
         if (isEditModalOpen && currentZone) {
             editForm.setFieldsValue({
                 name: currentZone?.name,
-                storageTemperatureMin: typeof currentZone.storageTemperature?.min === 'number' ? currentZone.storageTemperature.min : null,
-                storageTemperatureMax: typeof currentZone.storageTemperature?.max === 'number' ? currentZone.storageTemperature.max : null,
+                storageTemperatureMin: typeof currentZone.storageTemperature?.min === 'number' ? currentZone?.storageTemperature.min : null,
+                storageTemperatureMax: typeof currentZone.storageTemperature?.max === 'number' ? currentZone?.storageTemperature.max : null,
                 totalCapacity: typeof currentZone.totalCapacity === 'number' ? currentZone.totalCapacity : null,
             });
         }
@@ -107,8 +109,8 @@ const ZoneManagement = () => {
             const payload = {
                 name: values.name,
                 storageTemperature: {
-                    min: values.storageTemperatureMin,
-                    max: values.storageTemperatureMax,
+                    min: values?.storageTemperatureMin,
+                    max: values?.storageTemperatureMax,
                 },
                 totalCapacity: values.totalCapacity,
             };
@@ -148,15 +150,16 @@ const ZoneManagement = () => {
             const payload = {
                 name: values.name,
                 storageTemperature: {
-                    min: values.storageTemperatureMin,
-                    max: values.storageTemperatureMax,
+                    min: values?.storageTemperatureMin,
+                    max: values?.storageTemperatureMax,
                 },
                 totalCapacity: values.totalCapacity,
             };
             const result = await updateZone(currentZone._id, payload);
-            await fetchZones();
+
             if (result.success) {
                 message.success("Zone updated successfully!");
+                await fetchZones();
                 setIsEditModalOpen(false);
                 setCurrentZone(null);
                 editForm.resetFields();
@@ -174,6 +177,7 @@ const ZoneManagement = () => {
             }
         }
     };
+
 
     const handleChangeStatus = async (record, checked) => {
         const newStatus = checked ? 'ACTIVE' : 'INACTIVE';
@@ -208,12 +212,6 @@ const ZoneManagement = () => {
         setGoodsSearchTerm('');
     };
 
-    const filteredGoods = currentZone?.goods?.filter(item =>
-        item.name.toLowerCase().includes(goodsSearchTerm.toLowerCase()) ||
-        item.unit.toLowerCase().includes(goodsSearchTerm.toLowerCase()) ||
-        (item.expiryDate && dayjs(item.expiryDate).format('DD/MM/YYYY').includes(goodsSearchTerm))
-    ) || [];
-
     const columns = [
         {
             title: 'No.',
@@ -231,13 +229,17 @@ const ZoneManagement = () => {
         {
             title: 'Storage Temp (°C)',
             key: 'temperature',
-            render: (_, record) => `${record.storageTemperature?.min}°C - ${record.storageTemperature?.max}°C`,
+            render: (_, record) => `${record?.storageTemperature?.min}°C - ${record?.storageTemperature?.max}°C`,
             width: '15%',
         },
         {
             title: 'Capacity (Current/Total)',
             key: 'capacity',
-            render: (_, record) => `${record.currentCapacity}/${record.totalCapacity}`,
+            render: (_, record) => {
+                const current = Math.round(record?.currentCapacity || 0);
+                const total = Math.round(record?.totalCapacity || 0);
+                return `${current}/${total}`;
+            },
             width: '20%',
         },
         {
@@ -256,8 +258,8 @@ const ZoneManagement = () => {
             key: 'actions',
             width: '15%',
             render: (_, record) => {
-                const isZoneActive = record.status && record.status.toLowerCase() === 'active';
-                const hasGoods = record.currentCapacity > 0;
+                const isZoneActive = record?.status && record?.status?.toLowerCase() === 'active';
+                const hasGoods = record?.currentCapacity > 0;
 
                 return (
                     <Space size="small">
@@ -314,34 +316,6 @@ const ZoneManagement = () => {
                     </Space>
                 );
             },
-        },
-    ];
-
-
-    const goodsColumns = [
-        {
-            title: 'No.',
-            key: 'serialNo',
-            render: (text, record, index) => index + 1,
-            width: '5%',
-        },
-        {
-            title: 'Image',
-            dataIndex: 'imageUrl',
-            key: 'imageUrl',
-            render: (text) => <img src={text} alt="Product" style={{ width: 50, height: 50, borderRadius: '4px' }} onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/50x50/cccccc/ffffff?text=No+Image"; }} />,
-            width: '10%',
-        },
-        { title: 'Item Name', dataIndex: 'name', key: 'name', sorter: (a, b) => a.name.localeCompare(b.name), width: '25%' },
-        { title: 'Quantity', dataIndex: 'quantity', key: 'quantity', width: '15%' },
-        { title: 'Unit', dataIndex: 'unit', key: 'unit', width: '15%' },
-        {
-            title: 'Expiry Date',
-            dataIndex: 'expiryDate',
-            key: 'expiryDate',
-            render: (date) => (date ? dayjs(date).format('DD/MM/YYYY') : 'N/A'),
-            sorter: (a, b) => dayjs(a.expiryDate).unix() - dayjs(b.expiryDate).unix(),
-            width: '20%'
         },
     ];
 
@@ -471,7 +445,9 @@ const ZoneManagement = () => {
 
             <ModalCreateZone currentZone={currentZone} loading={loading} allZonesTotalCapacity={allZonesTotalCapacity} handleCreateCancel={handleCreateCancel} isCreateModalOpen={isCreateModalOpen} createForm={createForm} handleCreateSubmit={handleCreateSubmit} currentWarehouseTotalCapacity={currentWarehouseTotalCapacity} />
             <ModalEditZone isEditModalOpen={isEditModalOpen} handleEditCancel={handleEditCancel} editForm={editForm} handleEditSubmit={handleEditSubmit} currentWarehouseTotalCapacity={currentWarehouseTotalCapacity} loading={loading} allZonesTotalCapacity={allZonesTotalCapacity} currentZone={currentZone} />
-            <ModalDetailZone isViewGoodsModalOpen={isViewGoodsModalOpen} handleViewGoodsCancel={handleViewGoodsCancel} currentZone={currentZone} goodsSearchTerm={goodsSearchTerm} setGoodsSearchTerm={setGoodsSearchTerm} filteredGoods={filteredGoods} goodsColumns={goodsColumns} />
+            <ZoneItemProvider>
+                <ModalDetailZone isViewGoodsModalOpen={isViewGoodsModalOpen} handleViewGoodsCancel={handleViewGoodsCancel} currentZone={currentZone} />
+            </ZoneItemProvider>
 
         </div>
     );

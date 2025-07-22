@@ -102,8 +102,9 @@ const EditProduct = ({
           max: Number(maxStorageTemp),
         },
         image: imageUrl,
-        reason: "Cập nhật sản phẩm",
       };
+console.log("minStorageTemp:", minStorageTemp, "maxStorageTemp:", maxStorageTemp);
+console.log("updatedData:", updatedData);
 
       await updateProduct(updatedData);
       onSubmit(updatedData);

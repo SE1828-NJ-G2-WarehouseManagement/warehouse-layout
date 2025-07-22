@@ -18,7 +18,11 @@ import CategoryList from './pages/warehouseStaff/CategoryList';
 import CustomerList from './pages/warehouseStaff/CustomerList';
 import ProductList from './pages/warehouseStaff/ProductList';
 import ImportHistory from './pages/warehouseStaff/ImportHistory'; 
+import ExportHistory from './pages/warehouseStaff/ExportHistory'; 
 import { ProductProvider } from "../context/ProductContext";
+import { ZoneItemProvider } from "../context/ZoneItemContext";
+import { InternalTransferProvider } from "../context/InternalTransferContext";
+import { WarehouseProvider } from "../context/WarehouseContext"; 
 
 import { useAuth } from '../hooks/useAuth';
 import Profile from './common/Profile';
@@ -142,7 +146,17 @@ const StaffMainLayout = () => {
             />
             <Route
               path="internalWarehouseTransfer"
-              element={<InternalWarehouseTransfer />}
+              element={
+                <ZoneItemProvider>
+                  
+                    <InternalTransferProvider>
+                      {/* <WarehouseProvider> */}
+                      <InternalWarehouseTransfer />
+                  {/* </WarehouseProvider> */}
+                    </InternalTransferProvider>
+                  
+                </ZoneItemProvider>
+              }
             />
             <Route path="suppliers" element={<SupplierList />} />
             <Route path="categories" element={<CategoryList />} />
@@ -158,6 +172,7 @@ const StaffMainLayout = () => {
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="historyImport" element={<ImportHistory />} />
+            <Route path="historyExport" element={<ExportHistory />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
         </main>
