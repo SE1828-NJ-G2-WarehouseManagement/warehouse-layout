@@ -39,6 +39,8 @@ const ProductList = () => {
 const [editRequests, setEditRequests] = useState([]);
 const [activityRequests, setActivityRequests] = useState([]); 
 const [actionLoading, setActionLoading] = useState(false);
+const [showRejectedNote, setShowRejectedNote] = useState("");
+
   // Handle creating new product
   const handleAddProduct = async () => {
     try {
@@ -100,33 +102,40 @@ const [actionLoading, setActionLoading] = useState(false);
  );
 
   // Handle editing product
- const handleEditProduct = async (productId, status) => {
-   if (status !== "APPROVED") {
-     setMessage({
-       type: "info",
-       text: `Cannot edit product as it is not approved.`,
-     });
-     return;
-   }
+const handleEditProduct = async (productId, status, requestType) => {
+  // Chỉ cấm edit nếu là PENDING hoặc REJECTED CREATE
+  if (
+    status === "PENDING" ||
+    (status === "REJECTED" && requestType === "CREATE")
+  ) {
+    setMessage({
+      type: "info",
+      text:
+        status === "PENDING"
+          ? "Cannot edit product as it is pending approval."
+          : "Cannot edit product as REJECTED CREATE.",
+    });
+    return;
+  }
 
-   try {
-     const productData = await getProductById(productId);
-     if (productData.pendingChanges) {
-       setMessage({
-         type: "info",
-         text: "Cannot edit while changes are pending.",
-       });
-       return;
-     }
-     setEditingProduct(productData);
-     setShowEditForm(true);
-   } catch (error) {
-     setMessage({
-       type: "error",
-       text: "Failed to fetch product details.",
-     });
-   }
- };
+  try {
+    const productData = await getProductById(productId);
+    if (productData.pendingChanges) {
+      setMessage({
+        type: "info",
+        text: "Cannot edit while changes are pending.",
+      });
+      return;
+    }
+    setEditingProduct(productData);
+    setShowEditForm(true);
+  } catch (error) {
+    setMessage({
+      type: "error",
+      text: "Failed to fetch product details.",
+    });
+  }
+};
 
   // Handle edit submission
   const handleEditRequestSubmit = useCallback(
@@ -221,7 +230,20 @@ const [actionLoading, setActionLoading] = useState(false);
             <span>{message.text}</span>
           </div>
         )}
-
+        {showRejectedNote && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 min-w-[300px] max-w-[90vw]">
+              <h2 className="text-lg font-bold mb-2">Rejected Note</h2>
+              <p className="mb-4">{showRejectedNote}</p>
+              <button
+                className="bg-blue-600 text-white px-4 py-2 rounded"
+                onClick={() => setShowRejectedNote("")}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
         {/* Filters */}
         <div className="bg-gray-50 p-4 rounded-lg shadow-inner border border-gray-200">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -287,6 +309,9 @@ const [actionLoading, setActionLoading] = useState(false);
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">
                   Density
                 </th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">
+                  Request Type
+                </th>
                 <th className="px-4 py-3 text-center font-semibold text-gray-600">
                   Status
                 </th>
@@ -332,6 +357,24 @@ const [actionLoading, setActionLoading] = useState(false);
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          product.requestType === "CREATE"
+                            ? "bg-blue-200 text-blue-900"
+                            : product.requestType === "UPDATE"
+                            ? "bg-orange-100 text-orange-800"
+                            : product.requestType === "STATUS_CHANGE" ||
+                              product.requestType === "CHANGE_STATUS"
+                            ? "bg-violet-100 text-violet-800"
+                            : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {product.requestType === "CHANGE_STATUS"
+                          ? "STATUS_CHANGE"
+                          : product.requestType || "N/A"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           product.status === "APPROVED"
                             ? "bg-green-100 text-green-800"
                             : "bg-yellow-100 text-yellow-800"
@@ -353,26 +396,37 @@ const [actionLoading, setActionLoading] = useState(false);
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex justify-center gap-2">
-                        {/* Edit button */}
+                        {/* Nút Edit */}
                         <button
                           onClick={() =>
-                            handleEditProduct(product._id, product.status)
+                            handleEditProduct(
+                              product._id,
+                              product.status,
+                              product.requestType
+                            )
                           }
                           disabled={
-                            product.status !== "APPROVED" ||
+                            product.status === "PENDING" ||
+                            (product.requestType === "CREATE" &&
+                              product.status === "REJECTED") ||
                             product.pendingChanges ||
                             loading
                           }
                           className={`p-2 rounded-full ${
-                            product.status !== "APPROVED" ||
+                            product.status === "PENDING" ||
+                            (product.requestType === "CREATE" &&
+                              product.status === "REJECTED") ||
                             product.pendingChanges ||
                             loading
                               ? "text-gray-400 cursor-not-allowed"
                               : "text-blue-600 hover:bg-blue-100"
                           }`}
                           title={
-                            product.status !== "APPROVED"
-                              ? "Product must be approved first"
+                            product.status === "PENDING"
+                              ? "Product is pending approval"
+                              : product.requestType === "CREATE" &&
+                                product.status === "REJECTED"
+                              ? "Rejected CREATE cannot be edited"
                               : product.pendingChanges
                               ? "Cannot edit while changes are pending"
                               : "Edit product"
@@ -381,24 +435,30 @@ const [actionLoading, setActionLoading] = useState(false);
                           <Edit className="size-4" />
                         </button>
 
-                        {/* Toggle activity button */}
                         <button
                           onClick={() => handleChangeActivityStatus(product)}
                           disabled={
-                            product.status !== "APPROVED" ||
+                            product.status === "PENDING" ||
+                            (product.requestType === "CREATE" &&
+                              product.status === "REJECTED") ||
                             product.pendingChanges ||
                             loading
                           }
                           className={`p-2 rounded-full ${
-                            product.status !== "APPROVED" ||
+                            product.status === "PENDING" ||
+                            (product.requestType === "CREATE" &&
+                              product.status === "REJECTED") ||
                             product.pendingChanges ||
                             loading
                               ? "text-gray-400 cursor-not-allowed"
                               : "text-blue-600 hover:bg-blue-100"
                           }`}
                           title={
-                            product.status !== "APPROVED"
-                              ? "Product must be approved first"
+                            product.status === "PENDING"
+                              ? "Product is pending approval"
+                              : product.requestType === "CREATE" &&
+                                product.status === "REJECTED"
+                              ? "Rejected CREATE cannot change status"
                               : product.pendingChanges
                               ? "Cannot change while changes are pending"
                               : loading
@@ -414,6 +474,21 @@ const [actionLoading, setActionLoading] = useState(false);
                             <ToggleLeft className="size-4" />
                           )}
                         </button>
+
+                        {/* Nếu status là REJECTED, hiển thị nút con mắt */}
+                        {product.status === "REJECTED" && (
+                          <button
+                            onClick={() =>
+                              setShowRejectedNote(
+                                product.rejectedNote || "No note"
+                              )
+                            }
+                            className="p-2 rounded-full text-orange-600 hover:bg-orange-100"
+                            title="View rejection note"
+                          >
+                            <Info className="size-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
