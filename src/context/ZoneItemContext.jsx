@@ -13,28 +13,24 @@ const ZoneItemProvider = ({ children }) => {
     const [error, setError] = useState(null);
     const loadedWarehouseRef = useRef(null); 
 
-    const getAllProductsInZone = async (warehouseId) => {
-        if (loading || loadedWarehouseRef.current === warehouseId) {
-            return productsInZone;
-        }
-
-        setLoading(true);
-        setError(null);
-        try {
-            console.log("Calling API for warehouse:", warehouseId);
-            const data = await zoneItemService.getAllProductsInZone(warehouseId);
-
-            setProductsInZone(data || []);
-            loadedWarehouseRef.current = warehouseId; 
-
-            return data;
-        } catch (error) {
-            setError(error.message);
-            loadedWarehouseRef.current = null;
-            throw error;
-        } finally {
-            setLoading(false);
-        }
+    const getAllProductsInZone = async (warehouseId, force = false) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await zoneItemService.getAllProductsInZone(
+          warehouseId,
+          force
+        );
+        setProductsInZone(data || []);
+        loadedWarehouseRef.current = warehouseId;
+        return data;
+      } catch (error) {
+        setError(error.message);
+        loadedWarehouseRef.current = null;
+        throw error;
+      } finally {
+        setLoading(false);
+      }
     };
 
     const resetProducts = () => {
