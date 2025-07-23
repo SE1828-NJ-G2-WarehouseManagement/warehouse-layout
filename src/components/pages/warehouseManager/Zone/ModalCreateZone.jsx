@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 
 
-const ModalCreateZone = ({ handleCreateCancel, isCreateModalOpen, createForm, handleCreateSubmit, currentWarehouseTotalCapacity, loading, currentZone, allZonesTotalCapacity }) => {
+const ModalCreateZone = ({ handleCreateCancel, isCreateModalOpen, createForm, handleCreateSubmit, currentWarehouseTotalCapacity, loading, currentZone, allZonesTotalCapacity, totalItem }) => { // Thêm totalItem vào props
     return (
         <Modal
             title={<Title level={4} className="text-center mb-6">Create New Zone</Title>}
@@ -19,6 +19,7 @@ const ModalCreateZone = ({ handleCreateCancel, isCreateModalOpen, createForm, ha
             destroyOnClose
             width={600}
             className="rounded-lg"
+            centered
         >
             <Form
                 form={createForm}
@@ -98,18 +99,21 @@ const ModalCreateZone = ({ handleCreateCancel, isCreateModalOpen, createForm, ha
                                         return Promise.reject(new Error('Capacity must be a positive number (greater than 0).'));
                                     }
 
-                                    if (currentWarehouseTotalCapacity === 0 && !loading) {
+                                    if (currentWarehouseTotalCapacity === 0 && !loading && totalItem > 0) {
                                         return Promise.reject(new Error("Unable to verify warehouse capacity. Please refresh the page and try again."));
                                     }
 
-                                    const capacityOfCurrentZoneBeforeEdit = currentZone?.totalCapacity || 0;
-                                    const totalCapacityOfOtherZones = allZonesTotalCapacity - capacityOfCurrentZoneBeforeEdit;
+                                    if (currentWarehouseTotalCapacity > 0 || totalItem === 0) {
+                                        const capacityOfCurrentZoneBeforeEdit = currentZone?.totalCapacity || 0;
+                                        const totalCapacityOfOtherZones = allZonesTotalCapacity - capacityOfCurrentZoneBeforeEdit;
 
-                                    const remainingWarehouseCapacityForThisZone = currentWarehouseTotalCapacity - totalCapacityOfOtherZones;
+                                        const remainingWarehouseCapacityForThisZone = currentWarehouseTotalCapacity - totalCapacityOfOtherZones;
 
-                                    if (value > remainingWarehouseCapacityForThisZone) {
-                                        return Promise.reject(new Error(`Zone capacity (${value}) cannot exceed available capacity (${remainingWarehouseCapacityForThisZone}).`));
+                                        if (value > remainingWarehouseCapacityForThisZone) {
+                                            return Promise.reject(new Error(`Zone capacity (${value}) cannot exceed available capacity (${remainingWarehouseCapacityForThisZone}).`));
+                                        }
                                     }
+                                    
                                     return Promise.resolve();
                                 },
                             }),
@@ -140,4 +144,4 @@ const ModalCreateZone = ({ handleCreateCancel, isCreateModalOpen, createForm, ha
     )
 }
 
-export default ModalCreateZone
+export default ModalCreateZone;
