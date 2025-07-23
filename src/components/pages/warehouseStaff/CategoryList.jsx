@@ -112,8 +112,8 @@ const CategoryList = () => {
                 categoriesData = responseData.data.map(cat => ({
                     id: cat._id,
                     name: cat.name,
-                    status: cat.status, // e.g., 'PENDING', 'APPROVED', 'REJECTED'
-                    activityStatus: cat.action, // e.g., 'ACTIVE', 'INACTIVE'
+                    status: cat.status, 
+                    activityStatus: cat.action, 
                     rejectedNote: cat.rejectedNote || null,
                     requestType: cat.requestType || null, 
                 }));
@@ -126,7 +126,7 @@ const CategoryList = () => {
                     status: cat.status,
                     activityStatus: cat.action,
                     rejectedNote: cat.rejectedNote || null,
-                    requestType: cat.requestType || null, // <<< Lấy trường requestType từ API
+                    requestType: cat.requestType || null,
                 }));
                 total = categoriesData.length;
                 pages = Math.ceil(total / ITEMS_PER_PAGE);
@@ -202,7 +202,10 @@ const CategoryList = () => {
             try {
                 // Simulate API call for activity change. Send PATCH request to backend.
                 setMessage({ type: 'info', text: `Submitting activity change for ${categoryId}...` });
-                const res = await axiosInstance.patch(`/categories/${categoryId}/status`, { action: newActivityStatus.toUpperCase() });
+                const res = await axiosInstance.put(
+                  `/categories/${categoryId}/status`,
+                  { newAction: newActivityStatus.toUpperCase() }
+                );
 
                 if (res.status === 200 || res.status === 201) {
                     showNotification('success', `Activity status change submitted.`, `Category ${categoryId} is awaiting admin approval.`);
