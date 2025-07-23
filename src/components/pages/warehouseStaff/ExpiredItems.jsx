@@ -6,13 +6,11 @@ import {
   Filter,
   XCircle,
   Image as ImageIcon,
-  Trash2
 } from 'lucide-react';
 import axiosInstance from '../../../config/axios';
 
 const ExpiredProductsList = () => {
   const [productsInStock, setProductsInStock] = useState([]);
-  const [selectedProducts, setSelectedProducts] = useState([]);
   const [filterDate, setFilterDate] = useState('');
 
   const today = useMemo(() => {
@@ -32,6 +30,9 @@ const ExpiredProductsList = () => {
           quantity: item.zoneItem.quantity,
           expiryDate: item.item.expiredDate,
           image: item.product.image,
+          zone: item.zone.name,
+          weight: item.item.weights,
+          note: item.note,
         }));
         setProductsInStock(transformed);
       }
@@ -44,42 +45,18 @@ const ExpiredProductsList = () => {
     getExpiredProducts();
   }, []);
 
-  const getStatus = (expiryDateString) => {
-    const expiry = new Date(expiryDateString);
-    expiry.setHours(0, 0, 0, 0);
-    return expiry < today ? 'expired' : 'good';
-  };
-
-  const expiredProducts = useMemo(() => {
-    return productsInStock.filter(product => getStatus(product.expiryDate) === 'expired');
-  }, [productsInStock, today]);
-
   const filteredProducts = useMemo(() => {
-    if (!filterDate) return expiredProducts;
-    return expiredProducts.filter(product => product.expiryDate.startsWith(filterDate));
-  }, [expiredProducts, filterDate]);
-
-  const handleSelectProduct = (id) => {
-    setSelectedProducts(prev =>
-      prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
-    );
-  };
-
-  const handleSelectAll = () => {
-    const allIds = filteredProducts.map(p => p.id);
-    const isAllSelected = allIds.every(id => selectedProducts.includes(id));
-    setSelectedProducts(isAllSelected ? [] : allIds);
-  };
-
-  const handleDeleteSelected = () => {
-    if (selectedProducts.length === 0) return;
-    const confirmed = window.confirm("Are you sure you want to delete selected products?");
-    if (confirmed) {
-      const newList = productsInStock.filter(p => !selectedProducts.includes(p.id));
-      setProductsInStock(newList);
-      setSelectedProducts([]);
-    }
-  };
+    if (!filterDate) return productsInStock;
+    return productsInStock.filter(product => {
+      const productDate = new Date(product.expiryDate);
+      const filter = new Date(filterDate);
+      return (
+        productDate.getFullYear() === filter.getFullYear() &&
+        productDate.getMonth() === filter.getMonth() &&
+        productDate.getDate() === filter.getDate()
+      );
+    });
+  }, [productsInStock, filterDate]);
 
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
@@ -114,21 +91,6 @@ const ExpiredProductsList = () => {
         </div>
       </div>
 
-      <div className="flex justify-between items-center mb-4">
-        <h4 className="text-lg font-semibold text-gray-800">Manage Expired Products</h4>
-        {/* <button
-          onClick={handleDeleteSelected}
-          disabled={selectedProducts.length === 0}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition font-semibold ${
-            selectedProducts.length === 0
-              ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-              : 'bg-red-600 text-white hover:bg-red-700'
-          }`}
-        >
-          <Trash2 size={18} /> Delete Selected
-        </button> */}
-      </div>
-
       {filteredProducts.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl shadow-lg border border-red-300">
           <XCircle className="mx-auto size-20 text-red-500 mb-6" />
@@ -139,33 +101,20 @@ const ExpiredProductsList = () => {
           <table className="min-w-full table-auto text-sm text-left border-collapse">
             <thead className="bg-red-600 text-white">
               <tr>
-                {/* <th className="px-4 py-3 border-r border-red-500">
-                  <input
-                    type="checkbox"
-                    checked={filteredProducts.length > 0 && filteredProducts.every(p => selectedProducts.includes(p.id))}
-                    onChange={handleSelectAll}
-                  />
-                </th> */}
                 <th className="px-4 py-3 border-r border-red-500 flex items-center gap-2">
                   <ImageIcon size={18} /> Image
                 </th>
                 <th className="px-4 py-3 border-r border-red-500">Product Name</th>
                 <th className="px-4 py-3 border-r border-red-500">Product ID</th>
-                <th className="px-4 py-3 border-r border-red-500 text-center">Quantity</th>
+                <th className="px-4 py-3 border-r border-red-500">Zone</th>
+                <th className="px-4 py-3 border-r border-red-500 text-center">Weight (kg)</th>
                 <th className="px-4 py-3 border-r border-red-500 text-center">Expiry Date</th>
-                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Note</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredProducts.map((product) => (
                 <tr key={product.id} className="hover:bg-red-50 transition-colors duration-150 ease-in-out">
-                  {/* <td className="px-4 py-3 border-r border-gray-200">
-                    <input
-                      type="checkbox"
-                      checked={selectedProducts.includes(product.id)}
-                      onChange={() => handleSelectProduct(product.id)}
-                    />
-                  </td> */}
                   <td className="px-4 py-3 border-r border-gray-200">
                     <img
                       src={product.image}
@@ -178,17 +127,14 @@ const ExpiredProductsList = () => {
                   </td>
                   <td className="px-4 py-3 border-r border-gray-200 font-medium text-gray-800">{product.productName}</td>
                   <td className="px-4 py-3 border-r border-gray-200 text-gray-700">{product.productId}</td>
-                  <td className="px-4 py-3 border-r border-gray-200 text-center text-gray-700">{product.quantity}</td>
+                  <td className="px-4 py-3 border-r border-gray-200 text-gray-700">{product.zone}</td>
+                  <td className="px-4 py-3 border-r border-gray-200 text-center text-gray-700">{product.weight}</td>
                   <td className="px-4 py-3 border-r border-gray-200 text-center font-semibold text-red-600">
                     <div className="flex items-center justify-center gap-1">
                       <CalendarDays size={16} /> {formatDate(product.expiryDate)}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-red-700 font-semibold text-center">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-100 border border-red-300">
-                      <CalendarX size={14} className="mr-1" /> Expired
-                    </span>
-                  </td>
+                  <td className="px-4 py-3 text-gray-700">{product.note}</td>
                 </tr>
               ))}
             </tbody>
