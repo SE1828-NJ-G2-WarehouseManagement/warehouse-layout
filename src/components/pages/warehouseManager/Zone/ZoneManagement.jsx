@@ -33,7 +33,7 @@ const ZoneManagement = () => {
     const totalWarehouseCapacity = currentWarehouseTotalCapacity || 0;
     const usedWarehouseCapacity = allZonesTotalCapacity || 0;
     const remainingWarehouseCapacity = totalWarehouseCapacity - usedWarehouseCapacity;
-    const warehouseUsagePercentage = totalWarehouseCapacity > 0 ? parseFloat(((usedWarehouseCapacity / totalWarehouseCapacity) * 100).toFixed(2)) : 0;
+    const warehouseUsagePercentage = totalWarehouseCapacity > 0 ? parseFloat(((usedWarehouseCapacity / totalWarehouseCapacity) * 100)?.toFixed(2)) : 0;
 
     let warehouseProgressStatus = 'normal';
     let warehouseProgressColor = '#52c41a';
@@ -46,10 +46,10 @@ const ZoneManagement = () => {
     }
 
     useEffect(() => {
-        if (zones && zones.length > 0 && zones[0]?.warehouseId) {
+        if (zones && zones?.length > 0 && zones[0]?.warehouseId) {
             const warehouseInfo = zones[0].warehouseId;
-            if (warehouseInfo && typeof warehouseInfo.totalCapacity === 'number') {
-                setCurrentWarehouseTotalCapacity(warehouseInfo.totalCapacity);
+            if (warehouseInfo && typeof warehouseInfo?.totalCapacity === 'number') {
+                setCurrentWarehouseTotalCapacity(warehouseInfo?.totalCapacity);
             } else {
                 setCurrentWarehouseTotalCapacity(0);
             }
@@ -409,7 +409,7 @@ const ZoneManagement = () => {
                             type="primary"
                             icon={<PlusOutlined />}
                             onClick={showCreateModal}
-                            disabled={remainingWarehouseCapacity <= 0}
+                            disabled={totalItem > 0 && remainingWarehouseCapacity <= 0}
                         >
                             Create New Zone
                         </Button>
