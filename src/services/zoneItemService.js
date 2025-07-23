@@ -25,13 +25,10 @@ const zoneItemService = {
   async getAllProductsInZone(warehouseId) {
     try {
       console.log("API call - Getting products for warehouse:", warehouseId);
-      const response = await axiosInstance.get(
-        `/zone-items/my-warehouse/products`,
-        {
-          params: { warehouseId },
-          requiresAuth: true,
-        }
-      );
+      const response = await axiosInstance.get(`/items/my-warehouse`, {
+        params: { warehouseId },
+        requiresAuth: true,
+      });
       console.log("API response - Products count:", response.data?.length || 0);
       return response.data || [];
     } catch (error) {

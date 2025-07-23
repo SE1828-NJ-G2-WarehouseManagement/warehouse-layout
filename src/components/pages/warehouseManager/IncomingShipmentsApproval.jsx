@@ -17,6 +17,7 @@ import {
   Select,
   Spin,
   Alert,
+  DatePicker,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -62,6 +63,9 @@ const IncomingShipmentsApproval = () => {
   const [selectedZone, setSelectedZone] = useState("");
   const [approving, setApproving] = useState(false);
 
+  const [statusFilter, setStatusFilter] = useState("");
+  const [dateRange, setDateRange] = useState([]);
+  const { RangePicker } = DatePicker;
   // Error
   const [apiError, setApiError] = useState("");
 
@@ -82,16 +86,30 @@ const IncomingShipmentsApproval = () => {
 
  // --- Filtering Logic ---
  useEffect(() => {
-   const lower = searchTerm.toLowerCase();
-   setFilteredRequests(
-     requests.filter(
+   let filtered = requests;
+
+   if (searchTerm) {
+     const lower = searchTerm.toLowerCase();
+     filtered = filtered.filter(
        (req) =>
-         req._id?.toLowerCase().includes(lower) ||
-         req.receiver?.warehouseId?.name?.toLowerCase().includes(lower) ||
-         req.status?.toLowerCase().includes(lower)
-     )
-   );
- }, [searchTerm, requests]);
+         req.sourceWarehouseId?.name?.toLowerCase().includes(lower) ||
+         req.receiver?.warehouseId?.name?.toLowerCase().includes(lower)
+     );
+   }
+   if (statusFilter) {
+     filtered = filtered.filter((req) => req.status === statusFilter);
+   }
+   if (dateRange && dateRange.length === 2) {
+     filtered = filtered.filter((req) => {
+       const created = dayjs(req.createdAt);
+       return (
+         created.isSameOrAfter(dateRange[0], "day") &&
+         created.isSameOrBefore(dateRange[1], "day")
+       );
+     });
+   }
+   setFilteredRequests(filtered);
+ }, [searchTerm, statusFilter, dateRange, requests]);
 
  // --- Show details modal ---
  const showDetailsModal = async (record) => {
@@ -201,6 +219,16 @@ const IncomingShipmentsApproval = () => {
       align: "center",
     },
     {
+      title: "Created By",
+      key: "createdBy",
+      dataIndex: "createdBy",
+      render: (createdBy) =>
+        createdBy?.email ||
+        [createdBy?.firstName, createdBy?.lastName].filter(Boolean).join(" ") ||
+        "N/A",
+      width: 180,
+    },
+    {
       title: "Source Warehouse",
       key: "sourceWarehouseName",
       render: (_, record) => record.sourceWarehouseId?.name || "N/A",
@@ -267,28 +295,42 @@ const IncomingShipmentsApproval = () => {
         className="shadow-xl rounded-lg border border-gray-100 mb-8"
         bodyStyle={{ padding: 24 }}
       >
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+        <Space direction="horizontal" size="middle" style={{ width: "100%" }}>
           <Input
-            placeholder="Search by Request ID, Warehouse Name, Status"
+            placeholder="Search by Warehouse Name"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: 400 }}
+            style={{ width: 250 }}
             prefix={<SearchOutlined />}
             allowClear
           />
-
-          <Table
-            columns={columns}
-            dataSource={filteredRequests}
-            rowKey="_id"
-            loading={loading}
-            pagination={{ pageSize: 10, showSizeChanger: false }}
-            bordered
-            size="middle"
+          <Select
+            placeholder="Filter by Status"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            style={{ width: 180 }}
+            allowClear
+          >
+            <Option value="">All Status</Option>
+            <Option value="PENDING">PENDING</Option>
+            <Option value="APPROVED">APPROVED</Option>
+            <Option value="REJECTED">REJECTED</Option>
+          </Select>
+          <RangePicker
+            value={dateRange}
+            onChange={setDateRange}
+            format="DD/MM/YYYY"
+            style={{ width: 300 }}
+            allowClear
           />
         </Space>
       </Card>
-
+      <Table
+        columns={columns}
+        dataSource={filteredRequests}
+        loading={loading}
+        rowKey={(record) => record._id}
+      />
       {/* Details Modal */}
       <Modal
         title={
@@ -325,8 +367,15 @@ const IncomingShipmentsApproval = () => {
                   Transfer Details
                 </Title>
                 <Descriptions column={2} bordered size="small">
-                  <Descriptions.Item label={<Text strong>Request ID</Text>}>
-                    {currentRequest._id}
+                  <Descriptions.Item label={<Text strong>Created By</Text>}>
+                    {currentRequest.createdBy?.email ||
+                      [
+                        currentRequest.createdBy?.firstName,
+                        currentRequest.createdBy?.lastName,
+                      ]
+                        .filter(Boolean)
+                        .join(" ") ||
+                      "N/A"}
                   </Descriptions.Item>
                   <Descriptions.Item label={<Text strong>Status</Text>}>
                     <Tag
@@ -342,9 +391,22 @@ const IncomingShipmentsApproval = () => {
                     </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item
+                    label={<Text strong>Source Warehouse</Text>}
+                  >
+                    {currentRequest.sourceWarehouseId?.name}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={<Text strong>Source Zone</Text>}>
+                    {currentRequest.sourceZoneId?.name}
+                  </Descriptions.Item>
+                  <Descriptions.Item
                     label={<Text strong>Destination Warehouse</Text>}
                   >
                     {currentRequest.receiver?.warehouseId?.name}
+                  </Descriptions.Item>
+                  <Descriptions.Item
+                    label={<Text strong>Destination Zone</Text>}
+                  >
+                    {currentRequest.receiver?.zoneId?.name}
                   </Descriptions.Item>
                   <Descriptions.Item label={<Text strong>Created At</Text>}>
                     {dayjs(currentRequest.createdAt).format("DD/MM/YYYY HH:mm")}
@@ -369,8 +431,31 @@ const IncomingShipmentsApproval = () => {
                   {
                     title: "Product",
                     key: "product",
-                    render: (_, r) =>
-                      r.zoneItemId?.itemId?.productId?.name || "N/A",
+                    render: (_, r) => {
+                      const product = r.zoneItemId?.itemId?.productId;
+                      const temp =
+                        r.zoneItemId?.itemId?.productId?.storageTemperature;
+                      console.log("Product:", product, "Temp:", temp);
+                      return (
+                        <div>
+                          {temp && (
+                            <span
+                              style={{
+                                color: "#1890ff",
+                                fontSize: 13,
+                                marginRight: 8,
+                              }}
+                            >
+                              <span role="img" aria-label="temp">
+                                🌡️
+                              </span>
+                              Temp: {temp?.min}°C ~ {temp?.max}°C
+                            </span>
+                          )}
+                          <div>{product?.name || "N/A"}</div>
+                        </div>
+                      );
+                    },
                   },
                   {
                     title: "Zone",
@@ -389,10 +474,14 @@ const IncomingShipmentsApproval = () => {
                       r.zoneItemId?.itemId?.productId?.density ?? "N/A",
                   },
                   {
-                    title: "Unit",
-                    key: "unit",
+                    title: "Expired Date",
+                    key: "expiredDate",
                     render: (_, r) =>
-                      r.zoneItemId?.itemId?.productId?.unit || "N/A",
+                      r.zoneItemId?.itemId?.expiredDate
+                        ? dayjs(r.zoneItemId.itemId.expiredDate).format(
+                            "DD/MM/YYYY"
+                          )
+                        : "N/A",
                   },
                 ]}
                 rowKey={(_, idx) => idx}
@@ -559,6 +648,7 @@ const IncomingShipmentsApproval = () => {
       </Modal>
     </div>
   );
+  
 };
 
 export default IncomingShipmentsApproval;

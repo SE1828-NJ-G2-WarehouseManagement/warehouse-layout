@@ -59,7 +59,7 @@ const InternalWarehouseTransfer = () => {
         requiresAuth: true,
       });
 
-      console.log("🏭 API Response:", response.data);
+      // console.log("🏭 API Response:", response.data);
 
       if (response.data && Array.isArray(response.data)) {
         setWarehouses(response.data);
@@ -69,7 +69,7 @@ const InternalWarehouseTransfer = () => {
           "items"
         );
       } else {
-        console.error("🏭 Invalid response format:", response.data);
+        // console.error("🏭 Invalid response format:", response.data);
         setWarehouses([]);
       }
     } catch (error) {
@@ -103,7 +103,7 @@ const InternalWarehouseTransfer = () => {
       loadingRef.current = true;
 
       try {
-        console.log("📦 Loading products for warehouse:", warehouseId);
+        // console.log("📦 Loading products for warehouse:", warehouseId);
         setCurrentWarehouseId(warehouseId);
 
         if (
@@ -136,41 +136,32 @@ const InternalWarehouseTransfer = () => {
   // Transform API data to component format
   const productsWithWarehouseInfo = useMemo(() => {
     if (!productsInZone || productsInZone.length === 0) return [];
-
-    const uniqueProducts = productsInZone.reduce((acc, item) => {
-      const key = `${item.productId}-${item.zoneId}`;
-      if (!acc.find((p) => `${p.productId}-${p.zoneId}` === key)) {
-        acc.push(item);
-      }
-      return acc;
-    }, []);
-
-    return uniqueProducts.map((item, index) => ({
-      id: item.productId,
-      name: item.productName,
-      zoneItemId: item.zoneItemId,
-      currentWarehouseId: item.warehouseId,
-      currentWarehouseName: item.warehouseName,
-      zoneId: item.zoneId,
-      zoneName: item.zoneName,
-      quantity: item.quantity,
-      density: item.productDensity || 1,
-      requiredStorageCondition: "ambient",
-      requiredTemperatureMin: item.storageTemperature?.min || 15,
-      requiredTemperatureMax: item.storageTemperature?.max || 30,
-      sizeUnit: item.itemWeights || 1,
-      uniqueKey: `${item.productId}-${item.zoneId}-${index}`,
-    }));
+    return productsInZone
+      .filter((item) => item.itemId && item.productName)
+      .map((item, index) => ({
+        id: item.itemId,
+        zoneItemId: item.zoneItemId,
+        name: item.productName,
+        zoneName: item.zoneName,
+        quantity: item.quantity,
+        expiredDate: item.expiredDate,
+        density: item.productDensity || 1,
+        weights: item.itemWeights || 1,
+        capacity: (item.productDensity || 1) * (item.itemWeights || 1),
+        requiredTemperatureMin: item.productStorageTemperature?.min ?? "",
+        requiredTemperatureMax: item.productStorageTemperature?.max ?? "",
+        uniqueKey: `${item.itemId}-${index}`,
+      }));
   }, [productsInZone]);
 
   // Transform warehouses data để exclude current warehouse
   const availableDestinationWarehouses = useMemo(() => {
-    console.log("🏭 Computing availableDestinationWarehouses");
-    console.log("🏭 Warehouses:", warehouses);
-    console.log("🏭 Current warehouse ID:", currentWarehouseId);
+    // console.log("🏭 Computing availableDestinationWarehouses");
+    // console.log("🏭 Warehouses:", warehouses);
+    // console.log("🏭 Current warehouse ID:", currentWarehouseId);
 
     if (!warehouses || warehouses.length === 0) {
-      console.log("🏭 No warehouses available");
+      // console.log("🏭 No warehouses available");
       return [];
     }
 
@@ -178,7 +169,7 @@ const InternalWarehouseTransfer = () => {
       (warehouse) => warehouse.warehouseId !== currentWarehouseId
     );
 
-    console.log("🏭 Filtered warehouses:", filtered);
+    // console.log("🏭 Filtered warehouses:", filtered);
     return filtered;
   }, [warehouses, currentWarehouseId]);
 
@@ -214,13 +205,13 @@ const InternalWarehouseTransfer = () => {
       const product = productsWithWarehouseInfo.find(
         (p) => p.id === item.productId
       );
-      return sum + (product ? item.quantity * product.sizeUnit : 0);
+      return sum + (product ? item.quantity * product.capacity : 0);
     }, 0);
   }, [transferItems, productsWithWarehouseInfo]);
 
   // Handle warehouse selection to show details
   const handleWarehouseSelection = (warehouseId) => {
-    console.log("🏭 Warehouse selected:", warehouseId);
+    // console.log("🏭 Warehouse selected:", warehouseId);
     setDestinationWarehouse(warehouseId);
 
     const selectedWarehouse = warehouses.find(
@@ -248,6 +239,7 @@ const InternalWarehouseTransfer = () => {
         ...prevItems,
         {
           productId: product.id,
+          zoneItemId: product.zoneItemId,
           quantity: 1,
           sourceWarehouseId: product.currentWarehouseId,
           sourceZoneId: product.zoneId,
@@ -276,53 +268,72 @@ const InternalWarehouseTransfer = () => {
 
   // Handle transfer request submission
   // Handle transfer request submission
-const handleTransferRequest = async (e) => {
-  e.preventDefault();
-  setMessage({ type: "", text: "" });
+  const handleTransferRequest = async (e) => {
+    e.preventDefault();
+    setMessage({ type: "", text: "" });
 
-  if (transferItems.length === 0 || !destinationWarehouse) {
-    setMessage({
-      type: "error",
-      text: "Please add products and select a Destination Warehouse.",
-    });
-    return;
-  }
+    if (transferItems.length === 0 || !destinationWarehouse) {
+      setMessage({
+        type: "error",
+        text: "Please add products and select a Destination Warehouse.",
+      });
+      return;
+    }
 
-  try {
-    // Lấy đúng zoneItemId từ productsWithWarehouseInfo
-    const transferData = {
-      items: transferItems.map((item) => {
-        const product = productsWithWarehouseInfo.find(
-          (p) => p.id === item.productId
-        );
-        return {
-          zoneItemId: product?.zoneItemId, // lấy đúng zoneItemId
-          quantity: item.quantity,
-        };
-      }),
-      receiver: {
-        warehouseId: destinationWarehouse,
-      },
-    };
+    try {
+      // Lấy đúng zoneItemId từ productsWithWarehouseInfo
+      const transferData = {
+        items: transferItems.map((item) => {
+          const product = productsWithWarehouseInfo.find(
+            (p) => p.id === item.productId
+          );
+          return {
+            zoneItemId: item.zoneItemId, // lấy đúng zoneItemId
+            quantity: item.quantity,
+          };
+        }),
+        receiver: {
+          warehouseId: destinationWarehouse,
+        },
+      };
 
-    await createInternalTransfer(transferData);
+      await createInternalTransfer(transferData);
+      resetProducts && resetProducts();
+      await getAllProductsInZone(currentWarehouseId, true);
+      setMessage({
+        type: "success",
+        text: "Internal warehouse transfer request created successfully!",
+      });
 
-    setMessage({
-      type: "success",
-      text: "Internal warehouse transfer request created successfully!",
-    });
-
-    setTransferItems([]);
-    setSelectedProductToAdd("");
-    setDestinationWarehouse("");
-    setSelectedWarehouseDetails(null);
-  } catch (error) {
-    setMessage({
-      type: "error",
-      text: "Transfer request failed. Please try again later.",
-    });
-  }
-};
+      setTransferItems([]);
+      setSelectedProductToAdd("");
+      setDestinationWarehouse("");
+      setSelectedWarehouseDetails(null);
+    } catch (error) {
+      let errorMsg = "Transfer request failed. Please try again later.";
+      if (
+        error?.response?.data?.message // BE trả về message dạng string
+      ) {
+        errorMsg = error.response.data.message;
+      } else if (
+        error?.response?.data?.error &&
+        typeof error.response.data.error === "object"
+      ) {
+        // Nếu BE trả về error là object hoặc array
+        if (Array.isArray(error.response.data.error)) {
+          errorMsg = error.response.data.error
+            .map((e) => e.message || e)
+            .join(", ");
+        } else if (error.response.data.error.message) {
+          errorMsg = error.response.data.error.message;
+        }
+      }
+      setMessage({
+        type: "error",
+        text: errorMsg,
+      });
+    }
+  };
 
   // Clean up on unmount
   useEffect(() => {
@@ -410,8 +421,11 @@ const handleTransferRequest = async (e) => {
               <option value="">-- Select a product --</option>
               {availableProductsToAdd.map((product) => (
                 <option key={product.uniqueKey} value={product.id}>
-                  {product.name} - Zone: {product.zoneName} (Qty:{" "}
-                  {product.quantity})
+                  {product.name} - Zone: {product.zoneName} (Quantity:{" "}
+                  {product.quantity}) - Exp:{" "}
+                  {product.expiredDate
+                    ? new Date(product.expiredDate).toLocaleDateString()
+                    : "N/A"}
                 </option>
               ))}
             </select>
@@ -442,13 +456,16 @@ const handleTransferRequest = async (e) => {
                     Source Zone
                   </th>
                   <th className="px-3 py-2 border-r border-gray-300 text-center">
-                    Current Qty
+                    Quantity
                   </th>
                   <th className="px-3 py-2 border-r border-gray-300 text-center">
-                    Transfer Qty
+                    Expired Date
                   </th>
                   <th className="px-3 py-2 border-r border-gray-300 text-center">
-                    Unit Capacity
+                    Transfer Quantity
+                  </th>
+                  <th className="px-3 py-2 border-r border-gray-300 text-center">
+                    Capacity
                   </th>
                   <th className="px-3 py-2 border-r border-gray-300 text-center">
                     Required Temp
@@ -475,6 +492,11 @@ const handleTransferRequest = async (e) => {
                       <td className="px-3 py-2 text-center text-gray-700">
                         {product.quantity}
                       </td>
+                      <td className="px-3 py-2 text-center text-gray-700">
+                        {product.expiredDate
+                          ? new Date(product.expiredDate).toLocaleDateString()
+                          : "N/A"}
+                      </td>
                       <td className="px-3 py-2 text-center">
                         <input
                           type="number"
@@ -496,7 +518,7 @@ const handleTransferRequest = async (e) => {
                             size={16}
                             className="mr-1 text-purple-600"
                           />
-                          {(product.sizeUnit * item.quantity).toFixed(2)} m³
+                          {(product.capacity * item.quantity).toFixed(2)} m³
                         </div>
                       </td>
                       <td className="px-3 py-2 text-center text-gray-700">
@@ -556,13 +578,6 @@ const handleTransferRequest = async (e) => {
               </option>
             ))}
           </select>
-
-          {/* Debug info for select */}
-          <div className="text-xs text-gray-500 mt-1">
-            Options: {availableDestinationWarehouses.length} | Loading:{" "}
-            {warehouseLoading ? "Yes" : "No"} | Disabled:{" "}
-            {warehouseLoading ? "Yes" : "No"}
-          </div>
         </div>
 
         {/* Warehouse Details */}
@@ -618,6 +633,16 @@ const handleTransferRequest = async (e) => {
                           <div>
                             Available:{" "}
                             {zone.capacity?.available?.toFixed(2) || 0} m³
+                          </div>
+                          <div>
+                            {/* Hiển thị nhiệt độ nếu có */}
+                            {zone.storageTemperature && (
+                              <span>
+                                <Thermometer className="inline-block size-4 text-orange-600 mr-1" />
+                                Temp: {zone.storageTemperature.min}°C -{" "}
+                                {zone.storageTemperature.max}°C
+                              </span>
+                            )}
                           </div>
                           <div className="mt-1">
                             <span
