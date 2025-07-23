@@ -120,13 +120,13 @@ const handleEditProduct = async (productId, status, requestType) => {
 
   try {
     const productData = await getProductById(productId);
-    if (productData.pendingChanges) {
-      setMessage({
-        type: "info",
-        text: "Cannot edit while changes are pending.",
-      });
-      return;
-    }
+    // if (productData.pendingChanges) {
+    //   setMessage({
+    //     type: "info",
+    //     text: "Cannot edit while changes are pending.",
+    //   });
+    //   return;
+    // }
     setEditingProduct(productData);
     setShowEditForm(true);
   } catch (error) {
@@ -409,14 +409,12 @@ const handleEditProduct = async (productId, status, requestType) => {
                             product.status === "PENDING" ||
                             (product.requestType === "CREATE" &&
                               product.status === "REJECTED") ||
-                            product.pendingChanges ||
                             loading
                           }
                           className={`p-2 rounded-full ${
                             product.status === "PENDING" ||
                             (product.requestType === "CREATE" &&
                               product.status === "REJECTED") ||
-                            product.pendingChanges ||
                             loading
                               ? "text-gray-400 cursor-not-allowed"
                               : "text-blue-600 hover:bg-blue-100"
@@ -427,28 +425,25 @@ const handleEditProduct = async (productId, status, requestType) => {
                               : product.requestType === "CREATE" &&
                                 product.status === "REJECTED"
                               ? "Rejected CREATE cannot be edited"
-                              : product.pendingChanges
-                              ? "Cannot edit while changes are pending"
                               : "Edit product"
                           }
                         >
                           <Edit className="size-4" />
                         </button>
 
+                        {/* Nút đổi trạng thái hoạt động */}
                         <button
                           onClick={() => handleChangeActivityStatus(product)}
                           disabled={
                             product.status === "PENDING" ||
                             (product.requestType === "CREATE" &&
                               product.status === "REJECTED") ||
-                            product.pendingChanges ||
                             loading
                           }
                           className={`p-2 rounded-full ${
                             product.status === "PENDING" ||
                             (product.requestType === "CREATE" &&
                               product.status === "REJECTED") ||
-                            product.pendingChanges ||
                             loading
                               ? "text-gray-400 cursor-not-allowed"
                               : "text-blue-600 hover:bg-blue-100"
@@ -459,8 +454,6 @@ const handleEditProduct = async (productId, status, requestType) => {
                               : product.requestType === "CREATE" &&
                                 product.status === "REJECTED"
                               ? "Rejected CREATE cannot change status"
-                              : product.pendingChanges
-                              ? "Cannot change while changes are pending"
                               : loading
                               ? "Processing..."
                               : "Toggle activity status"
@@ -475,7 +468,7 @@ const handleEditProduct = async (productId, status, requestType) => {
                           )}
                         </button>
 
-                        {/* Nếu status là REJECTED, hiển thị nút con mắt */}
+                        {/* Nếu status là REJECTED, hiển thị nút xem rejected note */}
                         {product.status === "REJECTED" && (
                           <button
                             onClick={() =>

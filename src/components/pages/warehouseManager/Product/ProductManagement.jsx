@@ -221,7 +221,7 @@ const ProductManagement = () => {
           new: {
             image: pending.image,
             name: getName(pending.name),
-            category: getName(pending.category),
+            category: getName(pending.category?.name),
             storageTemp: pending.storageTemperature
               ? `${pending.storageTemperature.min}°C - ${pending.storageTemperature.max}°C`
               : "",
