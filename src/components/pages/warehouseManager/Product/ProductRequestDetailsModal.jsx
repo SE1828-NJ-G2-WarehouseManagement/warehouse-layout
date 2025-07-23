@@ -95,8 +95,8 @@ const ProductRequestDetailsModal = ({
               size="small"
               className="ant-descriptions-condensed"
             >
-              <Descriptions.Item label={<Text strong>Request ID</Text>}>
-                {currentRequest.id}
+              <Descriptions.Item label={<Text strong>Created By</Text>}>
+                {currentRequest.submittedBy}
               </Descriptions.Item>
               <Descriptions.Item label={<Text strong>Submitted By</Text>}>
                 {currentRequest.submittedBy}
@@ -125,6 +125,7 @@ const ProductRequestDetailsModal = ({
             Product Information
           </Divider>
           <div className="mt-4">
+            {/* CREATE */}
             {currentRequest.type === "CREATE" && (
               <Card className="shadow-sm border border-gray-100 p-6 rounded-lg">
                 <Title level={5} className="mb-4">
@@ -167,140 +168,255 @@ const ProductRequestDetailsModal = ({
                 </Descriptions>
               </Card>
             )}
-            {currentRequest.type === "UPDATE" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card
-                  title={
-                    <Title level={5} className="text-red-600 mb-0">
-                      Old Data
-                    </Title>
-                  }
-                  className="shadow-sm border border-red-200 p-4 rounded-lg"
-                >
+
+            {/* UPDATE & STATUS_CHANGE: Logic đảo chiều Old/New */}
+            {currentRequest.type === "UPDATE" &&
+              (currentRequest.status === "APPROVED" &&
+              currentRequest.type === "UPDATE" ? (
+                // Trái: New, Phải: Old
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card
+                    title={
+                      <Title level={5} className="text-green-600 mb-0">
+                        New Data
+                      </Title>
+                    }
+                    className="shadow-sm border border-green-200 p-4 rounded-lg"
+                  >
+                    <Descriptions
+                      column={1}
+                      bordered
+                      size="small"
+                      className="ant-descriptions-condensed"
+                    >
+                      <Descriptions.Item label={<Text strong>Image</Text>}>
+                        {currentRequest.productDetails?.new?.image && (
+                          <img
+                            src={currentRequest.productDetails.new.image}
+                            alt="New Product Image"
+                            className="w-24 h-24 object-contain rounded-md border border-gray-200 p-1"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src =
+                                "https://placehold.co/100x100/D0D0D0/808080?text=No+Image";
+                            }}
+                          />
+                        )}
+                      </Descriptions.Item>
+                      <Descriptions.Item
+                        label={<Text strong>Product Name</Text>}
+                      >
+                        {currentRequest.productDetails?.new?.name}
+                      </Descriptions.Item>
+                      <Descriptions.Item label={<Text strong>Category</Text>}>
+                        {currentRequest.productDetails?.new?.category || "N/A"}
+                      </Descriptions.Item>
+                      <Descriptions.Item
+                        label={<Text strong>Storage Temp (°C)</Text>}
+                      >
+                        {currentRequest.productDetails?.new?.storageTemp ||
+                          "N/A"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label={<Text strong>Density</Text>}>
+                        {currentRequest.productDetails?.new?.density || "N/A"}
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </Card>
+                  <Card
+                    title={
+                      <Title level={5} className="text-red-600 mb-0">
+                        Old Data
+                      </Title>
+                    }
+                    className="shadow-sm border border-red-200 p-4 rounded-lg"
+                  >
+                    <Descriptions
+                      column={1}
+                      bordered
+                      size="small"
+                      className="ant-descriptions-condensed"
+                    >
+                      <Descriptions.Item label={<Text strong>Image</Text>}>
+                        {currentRequest.productDetails?.old?.image && (
+                          <img
+                            src={currentRequest.productDetails.old.image}
+                            alt="Old Product Image"
+                            className="w-24 h-24 object-contain rounded-md border border-gray-200 p-1"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src =
+                                "https://placehold.co/100x100/D0D0D0/808080?text=No+Image";
+                            }}
+                          />
+                        )}
+                      </Descriptions.Item>
+                      <Descriptions.Item
+                        label={<Text strong>Product Name</Text>}
+                      >
+                        {currentRequest.productDetails?.old?.name}
+                      </Descriptions.Item>
+                      <Descriptions.Item label={<Text strong>Category</Text>}>
+                        {currentRequest.productDetails?.old?.category || "N/A"}
+                      </Descriptions.Item>
+                      <Descriptions.Item
+                        label={<Text strong>Storage Temp (°C)</Text>}
+                      >
+                        {currentRequest.productDetails?.old?.storageTemp ||
+                          "N/A"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label={<Text strong>Density</Text>}>
+                        {currentRequest.productDetails?.old?.density || "N/A"}
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </Card>
+                </div>
+              ) : (
+                // Trái: Old, Phải: New (bình thường)
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card
+                    title={
+                      <Title level={5} className="text-red-600 mb-0">
+                        Old Data
+                      </Title>
+                    }
+                    className="shadow-sm border border-red-200 p-4 rounded-lg"
+                  >
+                    <Descriptions
+                      column={1}
+                      bordered
+                      size="small"
+                      className="ant-descriptions-condensed"
+                    >
+                      <Descriptions.Item label={<Text strong>Image</Text>}>
+                        {currentRequest.productDetails?.old?.image && (
+                          <img
+                            src={currentRequest.productDetails.old.image}
+                            alt="Old Product Image"
+                            className="w-24 h-24 object-contain rounded-md border border-gray-200 p-1"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src =
+                                "https://placehold.co/100x100/D0D0D0/808080?text=No+Image";
+                            }}
+                          />
+                        )}
+                      </Descriptions.Item>
+                      <Descriptions.Item
+                        label={<Text strong>Product Name</Text>}
+                      >
+                        {currentRequest.productDetails?.old?.name}
+                      </Descriptions.Item>
+                      <Descriptions.Item label={<Text strong>Category</Text>}>
+                        {currentRequest.productDetails?.old?.category || "N/A"}
+                      </Descriptions.Item>
+                      <Descriptions.Item
+                        label={<Text strong>Storage Temp (°C)</Text>}
+                      >
+                        {currentRequest.productDetails?.old?.storageTemp ||
+                          "N/A"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label={<Text strong>Density</Text>}>
+                        {currentRequest.productDetails?.old?.density || "N/A"}
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </Card>
+                  <Card
+                    title={
+                      <Title level={5} className="text-green-600 mb-0">
+                        New Data
+                      </Title>
+                    }
+                    className="shadow-sm border border-green-200 p-4 rounded-lg"
+                  >
+                    <Descriptions
+                      column={1}
+                      bordered
+                      size="small"
+                      className="ant-descriptions-condensed"
+                    >
+                      <Descriptions.Item label={<Text strong>Image</Text>}>
+                        {currentRequest.productDetails?.new?.image && (
+                          <img
+                            src={currentRequest.productDetails.new.image}
+                            alt="New Product Image"
+                            className="w-24 h-24 object-contain rounded-md border border-gray-200 p-1"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src =
+                                "https://placehold.co/100x100/D0D0D0/808080?text=No+Image";
+                            }}
+                          />
+                        )}
+                      </Descriptions.Item>
+                      <Descriptions.Item
+                        label={<Text strong>Product Name</Text>}
+                      >
+                        {currentRequest.productDetails?.new?.name}
+                      </Descriptions.Item>
+                      <Descriptions.Item label={<Text strong>Category</Text>}>
+                        {currentRequest.productDetails?.new?.category || "N/A"}
+                      </Descriptions.Item>
+                      <Descriptions.Item
+                        label={<Text strong>Storage Temp (°C)</Text>}
+                      >
+                        {currentRequest.productDetails?.new?.storageTemp ||
+                          "N/A"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label={<Text strong>Density</Text>}>
+                        {currentRequest.productDetails?.new?.density || "N/A"}
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </Card>
+                </div>
+              ))}
+
+            {/* STATUS_CHANGE riêng nếu không có old/new */}
+            {currentRequest.type === "STATUS_CHANGE" &&
+              !currentRequest.productDetails?.old &&
+              !currentRequest.productDetails?.new && (
+                <Card className="shadow-sm border border-gray-100 p-6 rounded-lg">
+                  <Title level={5} className="mb-4">
+                    Status Change Details
+                  </Title>
                   <Descriptions
                     column={1}
                     bordered
                     size="small"
                     className="ant-descriptions-condensed"
                   >
-                    <Descriptions.Item label={<Text strong>Image</Text>}>
-                      {currentRequest.productDetails?.old?.image && (
-                        <img
-                          src={currentRequest.productDetails.old.image}
-                          alt="Old Product Image"
-                          className="w-24 h-24 object-contain rounded-md border border-gray-200 p-1"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src =
-                              "https://placehold.co/100x100/D0D0D0/808080?text=No+Image";
-                          }}
-                        />
-                      )}
-                    </Descriptions.Item>
                     <Descriptions.Item label={<Text strong>Product Name</Text>}>
-                      {currentRequest.productDetails?.old?.name}
+                      {currentRequest.productDetails?.name}
                     </Descriptions.Item>
-                    <Descriptions.Item label={<Text strong>Category</Text>}>
-                      {currentRequest.productDetails?.old?.category || "N/A"}
-                    </Descriptions.Item>
-                    <Descriptions.Item
-                      label={<Text strong>Storage Temp (°C)</Text>}
-                    >
-                      {currentRequest.productDetails?.old?.storageTemp || "N/A"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label={<Text strong>Density</Text>}>
-                      {currentRequest.productDetails?.old?.density || "N/A"}
+                    <Descriptions.Item label={<Text strong>Transition</Text>}>
+                      <Space>
+                        <Tag
+                          color={
+                            currentRequest.productDetails?.oldStatus ===
+                            "AVAILABLE"
+                              ? "green"
+                              : "red"
+                          }
+                        >
+                          {currentRequest.productDetails?.oldStatus}
+                        </Tag>
+                        <ArrowRightOutlined style={{ color: "#999" }} />
+                        <Tag
+                          color={
+                            currentRequest.productDetails?.newStatus ===
+                            "AVAILABLE"
+                              ? "green"
+                              : "red"
+                          }
+                        >
+                          {currentRequest.productDetails?.newStatus}
+                        </Tag>
+                      </Space>
                     </Descriptions.Item>
                   </Descriptions>
                 </Card>
-                <Card
-                  title={
-                    <Title level={5} className="text-green-600 mb-0">
-                      New Data
-                    </Title>
-                  }
-                  className="shadow-sm border border-green-200 p-4 rounded-lg"
-                >
-                  <Descriptions
-                    column={1}
-                    bordered
-                    size="small"
-                    className="ant-descriptions-condensed"
-                  >
-                    <Descriptions.Item label={<Text strong>Image</Text>}>
-                      {currentRequest.productDetails?.new?.image && (
-                        <img
-                          src={currentRequest.productDetails.new.image}
-                          alt="New Product Image"
-                          className="w-24 h-24 object-contain rounded-md border border-gray-200 p-1"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src =
-                              "https://placehold.co/100x100/D0D0D0/808080?text=No+Image";
-                          }}
-                        />
-                      )}
-                    </Descriptions.Item>
-                    <Descriptions.Item label={<Text strong>Product Name</Text>}>
-                      {currentRequest.productDetails?.new?.name}
-                    </Descriptions.Item>
-                    <Descriptions.Item label={<Text strong>Category</Text>}>
-                      {currentRequest.productDetails?.new?.category || "N/A"}
-                    </Descriptions.Item>
-                    <Descriptions.Item
-                      label={<Text strong>Storage Temp (°C)</Text>}
-                    >
-                      {currentRequest.productDetails?.new?.storageTemp || "N/A"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label={<Text strong>Density</Text>}>
-                      {currentRequest.productDetails?.new?.density || "N/A"}
-                    </Descriptions.Item>
-                  </Descriptions>
-                </Card>
-              </div>
-            )}
-            {currentRequest.type === "STATUS_CHANGE" && (
-              <Card className="shadow-sm border border-gray-100 p-6 rounded-lg">
-                <Title level={5} className="mb-4">
-                  Status Change Details
-                </Title>
-                <Descriptions
-                  column={1}
-                  bordered
-                  size="small"
-                  className="ant-descriptions-condensed"
-                >
-                  <Descriptions.Item label={<Text strong>Product Name</Text>}>
-                    {currentRequest.productDetails?.name}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={<Text strong>Transition</Text>}>
-                    <Space>
-                      <Tag
-                        color={
-                          currentRequest.productDetails?.oldStatus ===
-                          "AVAILABLE"
-                            ? "green"
-                            : "red"
-                        }
-                      >
-                        {currentRequest.productDetails?.oldStatus}
-                      </Tag>
-                      <ArrowRightOutlined style={{ color: "#999" }} />
-                      <Tag
-                        color={
-                          currentRequest.productDetails?.newStatus ===
-                          "AVAILABLE"
-                            ? "green"
-                            : "red"
-                        }
-                      >
-                        {currentRequest.productDetails?.newStatus}
-                      </Tag>
-                    </Space>
-                  </Descriptions.Item>
-                </Descriptions>
-              </Card>
-            )}
+              )}
+
+            {/* Rejection Reason */}
             {currentRequest.status === "REJECTED" &&
               currentRequest.rejectionReason && (
                 <Card className="mt-6 p-4 bg-red-50 border border-red-300 rounded-lg">

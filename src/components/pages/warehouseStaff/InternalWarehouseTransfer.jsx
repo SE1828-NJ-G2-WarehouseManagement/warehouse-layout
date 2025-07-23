@@ -147,7 +147,7 @@ const InternalWarehouseTransfer = () => {
         expiredDate: item.expiredDate,
         density: item.productDensity || 1,
         weights: item.itemWeights || 1,
-        capacity: (item.productDensity || 1) * (item.itemWeights || 1),
+        capacity: (item.itemWeights) / (item.productDensity) ,
         requiredTemperatureMin: item.productStorageTemperature?.min ?? "",
         requiredTemperatureMax: item.productStorageTemperature?.max ?? "",
         uniqueKey: `${item.itemId}-${index}`,
