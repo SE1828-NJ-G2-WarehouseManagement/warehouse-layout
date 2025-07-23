@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   CalendarX,
   CalendarDays,
@@ -8,19 +8,10 @@ import {
   Image as ImageIcon,
   Trash2
 } from 'lucide-react';
+import axiosInstance from '../../../config/axios';
 
 const ExpiredProductsList = () => {
-  const [productsInStock, setProductsInStock] = useState([
-    { id: 'STOCK001', productId: 'PROD001', productName: 'Dell XPS 15 Laptop', quantity: 5, expiryDate: '2025-05-15', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/surface-laptop-go-web.jpg' },
-    { id: 'STOCK002', productId: 'PROD002', productName: 'LG UltraWide Monitor', quantity: 10, expiryDate: '2025-07-20', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/surface-laptop-go-web.jpg' },
-    { id: 'STOCK003', productId: 'PROD003', productName: 'Anne Pro 2 Mechanical Keyboard', quantity: 20, expiryDate: '2026-01-01', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/surface-laptop-go-web.jpg' },
-    { id: 'STOCK004', productId: 'PROD004', productName: 'Logitech MX Master 3 Mouse', quantity: 15, expiryDate: '2025-06-18', image: 'https://surfaceviet.vn/wp-content/uploads/2020/10/surface-laptop-go-web.jpg' },
-    { id: 'STOCK005', productId: 'PROD005', productName: 'Samsung 1TB SSD', quantity: 8, expiryDate: '2025-08-25', image: 'https://via.placeholder.com/60/FF00FF/FFFFFF?text=SSD' },
-    { id: 'STOCK006', productId: 'PROD006', productName: 'Sony WH-1000XM4 Headphone', quantity: 12, expiryDate: '2026-03-10', image: 'https://via.placeholder.com/60/00FFFF/000000?text=Headphone' },
-    { id: 'STOCK007', productId: 'PROD007', productName: 'TP-Link AX1800 Wifi Router', quantity: 7, expiryDate: '2025-07-05', image: 'https://via.placeholder.com/60/F0F8FF/000000?text=Router' },
-    { id: 'STOCK008', productId: 'PROD008', productName: 'Logitech C920 Webcam', quantity: 3, expiryDate: '2025-06-25', image: 'https://via.placeholder.com/60/8A2BE2/FFFFFF?text=Webcam' },
-  ]);
-
+  const [productsInStock, setProductsInStock] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [filterDate, setFilterDate] = useState('');
 
@@ -28,6 +19,29 @@ const ExpiredProductsList = () => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
+  }, []);
+
+  const getExpiredProducts = async () => {
+    try {
+      const response = await axiosInstance.get('/expired/expired-product');
+      if (response.data.success) {
+        const transformed = response.data.data.map(item => ({
+          id: item.expiredId,
+          productId: item.product.id,
+          productName: item.product.name,
+          quantity: item.zoneItem.quantity,
+          expiryDate: item.item.expiredDate,
+          image: item.product.image,
+        }));
+        setProductsInStock(transformed);
+      }
+    } catch (error) {
+      console.error('Error fetching expired products:', error);
+    }
+  };
+
+  useEffect(() => {
+    getExpiredProducts();
   }, []);
 
   const getStatus = (expiryDateString) => {
@@ -42,7 +56,7 @@ const ExpiredProductsList = () => {
 
   const filteredProducts = useMemo(() => {
     if (!filterDate) return expiredProducts;
-    return expiredProducts.filter(product => product.expiryDate === filterDate);
+    return expiredProducts.filter(product => product.expiryDate.startsWith(filterDate));
   }, [expiredProducts, filterDate]);
 
   const handleSelectProduct = (id) => {
@@ -76,16 +90,14 @@ const ExpiredProductsList = () => {
     <div className="p-6 sm:p-8 md:p-10 bg-gradient-to-br from-red-50 to-orange-100 min-h-screen font-sans">
       <div className="flex items-center space-x-4 mb-8 p-4 bg-white rounded-xl shadow-lg">
         <CalendarX className="text-red-700 size-10 md:size-12" />
-        <h3 className="text-xl md:text-2xl font-extrabold text-gray-900">
-          Expired Products
-        </h3>
+        <h3 className="text-xl md:text-2xl font-extrabold text-gray-900">Expired Products</h3>
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-lg flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-3">
           <Boxes className="text-indigo-600 size-6" />
           <p className="text-lg text-gray-800 font-semibold">
-            Total Expired Products: <span className="text-red-600">{expiredProducts.length}</span>
+            Total Expired Products: <span className="text-red-600">{filteredProducts.length}</span>
           </p>
         </div>
 
@@ -104,7 +116,7 @@ const ExpiredProductsList = () => {
 
       <div className="flex justify-between items-center mb-4">
         <h4 className="text-lg font-semibold text-gray-800">Manage Expired Products</h4>
-        <button
+        {/* <button
           onClick={handleDeleteSelected}
           disabled={selectedProducts.length === 0}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition font-semibold ${
@@ -113,30 +125,27 @@ const ExpiredProductsList = () => {
               : 'bg-red-600 text-white hover:bg-red-700'
           }`}
         >
-          <Trash2 size={18} />
-          Delete Selected
-        </button>
+          <Trash2 size={18} /> Delete Selected
+        </button> */}
       </div>
 
       {filteredProducts.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl shadow-lg border border-red-300">
           <XCircle className="mx-auto size-20 text-red-500 mb-6" />
-          <p className="text-gray-700 text-xl font-medium">
-            No expired products found matching your selection.
-          </p>
+          <p className="text-gray-700 text-xl font-medium">No expired products found matching your selection.</p>
         </div>
       ) : (
         <div className="overflow-x-auto bg-white rounded-xl shadow-lg">
           <table className="min-w-full table-auto text-sm text-left border-collapse">
             <thead className="bg-red-600 text-white">
               <tr>
-                <th className="px-4 py-3 border-r border-red-500">
+                {/* <th className="px-4 py-3 border-r border-red-500">
                   <input
                     type="checkbox"
                     checked={filteredProducts.length > 0 && filteredProducts.every(p => selectedProducts.includes(p.id))}
                     onChange={handleSelectAll}
                   />
-                </th>
+                </th> */}
                 <th className="px-4 py-3 border-r border-red-500 flex items-center gap-2">
                   <ImageIcon size={18} /> Image
                 </th>
@@ -148,15 +157,15 @@ const ExpiredProductsList = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredProducts.map((product, index) => (
+              {filteredProducts.map((product) => (
                 <tr key={product.id} className="hover:bg-red-50 transition-colors duration-150 ease-in-out">
-                  <td className="px-4 py-3 border-r border-gray-200">
+                  {/* <td className="px-4 py-3 border-r border-gray-200">
                     <input
                       type="checkbox"
                       checked={selectedProducts.includes(product.id)}
                       onChange={() => handleSelectProduct(product.id)}
                     />
-                  </td>
+                  </td> */}
                   <td className="px-4 py-3 border-r border-gray-200">
                     <img
                       src={product.image}
@@ -164,7 +173,6 @@ const ExpiredProductsList = () => {
                       className="w-16 h-16 object-cover rounded-md shadow-sm"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = "https://via.placeholder.com/60/CCCCCC/808080?text=No+Img";
                       }}
                     />
                   </td>
