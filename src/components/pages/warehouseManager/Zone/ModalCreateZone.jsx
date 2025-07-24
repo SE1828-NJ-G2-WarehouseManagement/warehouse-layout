@@ -10,7 +10,7 @@ import {
 
 
 const ModalCreateZone = ({ handleCreateCancel, isCreateModalOpen, createForm, handleCreateSubmit, currentWarehouseTotalCapacity, loading, currentZone, allZonesTotalCapacity, totalItem, zones }) => {
-    return (
+    return (    
         <Modal
             title={<Title level={4} className="text-center mb-6">Create New Zone</Title>}
             open={isCreateModalOpen}
