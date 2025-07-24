@@ -23,10 +23,23 @@ class ZoneService {
         }
     }
 
+    async getZone () {
+        try {
+            const response = await axiosInstance.get(`${this.url}/all`, {
+                requiresAuth: true
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error in ZoneService.getZone:", error);
+            const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred while fetching all zones.";
+            throw new Error(errorMessage);
+        }
+    }
+
 
     async getAllZonesNonPaginated() {
         try {
-            const response = await axiosInstance.get(`${this.url}/capacity`, {
+            const response = await axiosInstance?.get(`${this.url}/capacity`, {
                 requiresAuth: true
             });
             return response.data;

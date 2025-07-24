@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 
 
-const ModalCreateZone = ({ handleCreateCancel, isCreateModalOpen, createForm, handleCreateSubmit, currentWarehouseTotalCapacity, loading, currentZone, allZonesTotalCapacity, totalItem }) => { // Thêm totalItem vào props
+const ModalCreateZone = ({ handleCreateCancel, isCreateModalOpen, createForm, handleCreateSubmit, currentWarehouseTotalCapacity, loading, currentZone, allZonesTotalCapacity, totalItem, zones }) => {
     return (
         <Modal
             title={<Title level={4} className="text-center mb-6">Create New Zone</Title>}
@@ -34,7 +34,22 @@ const ModalCreateZone = ({ handleCreateCancel, isCreateModalOpen, createForm, ha
                         name="name"
                         rules={[
                             { required: true, message: 'Zone name is required.' },
-                            { min: 3, message: 'Zone name must be at least 3 characters.' }
+                            { min: 3, message: 'Zone name must be at least 3 characters.' },
+                            // eslint-disable-next-line no-unused-vars
+                            ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                    if (!value) {
+                                        return Promise?.resolve(); 
+                                    }
+                                    const isDuplicate = zones?.some(
+                                        (zone) => zone?.name?.toLowerCase() === value?.toLowerCase()
+                                    );
+                                    if (isDuplicate) {
+                                        return Promise?.reject(new Error('Zone name must be unique.'));
+                                    }
+                                    return Promise.resolve();
+                                },
+                            }),
                         ]}
                         className="mb-4 md:col-span-2"
                     >
@@ -69,7 +84,7 @@ const ModalCreateZone = ({ handleCreateCancel, isCreateModalOpen, createForm, ha
                                     if (value > getFieldValue('storageTemperatureMin')) {
                                         return Promise.resolve();
                                     }
-                                    return Promise.reject(new Error('Max temperature must be greater than or equal to min temperature.'));
+                                    return Promise.reject(new Error('Max temperature must be greater than to min temperature.'));
                                 },
                             }),
                         ]}
