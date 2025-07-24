@@ -12,12 +12,15 @@ import ModalDetailZone from './ModalDetailZone.jsx';
 import ModalCreateZone from './ModalCreateZone.jsx';
 import ModalEditZone from './ModalEditZone.jsx';
 import { ZoneItemProvider } from '../../../../context/ZoneItemContext.jsx';
+import { useWarehouse } from '../../../../context/WarehouseContext.jsx';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const ZoneManagement = () => {
     const { zones, loading, fetchZones, createZone, updateZone, pageIndex, setPageIndex, totalItem, allZonesTotalCapacity, changeZoneStatus, setDataParams, dataParams, pageSize, setPageSize } = useZones();
+    const { warehouses, getCapacityByWarehouse } = useWarehouse(); 
+
     const [filteredZones, setFilteredZones] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -29,11 +32,15 @@ const ZoneManagement = () => {
     const [createForm] = Form.useForm();
     const [editForm] = Form.useForm();
     const [statusFilter, setStatusFilter] = useState('All Status');
-    const [currentWarehouseTotalCapacity, setCurrentWarehouseTotalCapacity] = useState(0);
-    const totalWarehouseCapacity = currentWarehouseTotalCapacity || 0;
+    
+    const totalWarehouseCapacity = warehouses?.[0]?.totalCapacity || 0; 
+
     const usedWarehouseCapacity = allZonesTotalCapacity || 0;
     const remainingWarehouseCapacity = totalWarehouseCapacity - usedWarehouseCapacity;
     const warehouseUsagePercentage = totalWarehouseCapacity > 0 ? parseFloat(((usedWarehouseCapacity / totalWarehouseCapacity) * 100)?.toFixed(2)) : 0;
+    
+    console.log("Total Warehouse Capacity (from useWarehouse):", totalWarehouseCapacity);
+    console.log("Warehouses state from context:", warehouses);
 
     let warehouseProgressStatus = 'normal';
     let warehouseProgressColor = '#52c41a';
@@ -46,17 +53,8 @@ const ZoneManagement = () => {
     }
 
     useEffect(() => {
-        if (zones && zones?.length > 0 && zones[0]?.warehouseId) {
-            const warehouseInfo = zones[0].warehouseId;
-            if (warehouseInfo && typeof warehouseInfo?.totalCapacity === 'number') {
-                setCurrentWarehouseTotalCapacity(warehouseInfo?.totalCapacity);
-            } else {
-                setCurrentWarehouseTotalCapacity(0);
-            }
-        } else {
-            setCurrentWarehouseTotalCapacity(0);
-        }
-    }, [zones]);
+        getCapacityByWarehouse(); 
+    }, []); 
 
     useEffect(() => {
         let tempFiltered = [...zones]
@@ -142,8 +140,8 @@ const ZoneManagement = () => {
                 message.error('Zone name must be unique.');
                 return;
             }
-            console.log("Current Warehouse Total Capacity (from state - edit):", currentWarehouseTotalCapacity);
-            if (currentWarehouseTotalCapacity === 0 && !loading) {
+            console.log("Current Warehouse Total Capacity (from state - edit):", totalWarehouseCapacity);
+            if (totalWarehouseCapacity === 0 && !loading) { 
                 message.error("Unable to verify warehouse capacity. Please try again.");
                 return;
             }
@@ -340,7 +338,7 @@ const ZoneManagement = () => {
                         <Col xs={24} sm={8}>
                             <Statistic
                                 title={<Text strong>Total Warehouse Capacity</Text>}
-                                value={totalWarehouseCapacity}
+                                value={totalWarehouseCapacity} 
                                 suffix="units"
                                 className="text-center"
                             />
@@ -419,7 +417,6 @@ const ZoneManagement = () => {
                         columns={columns}
                         dataSource={filteredZones}
                         rowKey="_id"
-                        // scroll={{ y: 230 }} 
                         loading={loading}
                         pagination={false}
                         bordered
@@ -443,8 +440,8 @@ const ZoneManagement = () => {
                 </Space>
             </Card>
 
-            <ModalCreateZone currentZone={currentZone} loading={loading} allZonesTotalCapacity={allZonesTotalCapacity} handleCreateCancel={handleCreateCancel} isCreateModalOpen={isCreateModalOpen} createForm={createForm} handleCreateSubmit={handleCreateSubmit} currentWarehouseTotalCapacity={currentWarehouseTotalCapacity} />
-            <ModalEditZone isEditModalOpen={isEditModalOpen} handleEditCancel={handleEditCancel} editForm={editForm} handleEditSubmit={handleEditSubmit} currentWarehouseTotalCapacity={currentWarehouseTotalCapacity} loading={loading} allZonesTotalCapacity={allZonesTotalCapacity} currentZone={currentZone} />
+            <ModalCreateZone currentZone={currentZone} loading={loading} allZonesTotalCapacity={allZonesTotalCapacity} handleCreateCancel={handleCreateCancel} isCreateModalOpen={isCreateModalOpen} createForm={createForm} handleCreateSubmit={handleCreateSubmit} currentWarehouseTotalCapacity={totalWarehouseCapacity} totalItem={totalItem} zones={zones} />
+            <ModalEditZone isEditModalOpen={isEditModalOpen} handleEditCancel={handleEditCancel} editForm={editForm} handleEditSubmit={handleEditSubmit} currentWarehouseTotalCapacity={totalWarehouseCapacity} loading={loading} allZonesTotalCapacity={allZonesTotalCapacity} currentZone={currentZone} zones={zones} />
             <ZoneItemProvider>
                 <ModalDetailZone isViewGoodsModalOpen={isViewGoodsModalOpen} handleViewGoodsCancel={handleViewGoodsCancel} currentZone={currentZone} />
             </ZoneItemProvider>
@@ -454,4 +451,3 @@ const ZoneManagement = () => {
 };
 
 export default ZoneManagement;
-
