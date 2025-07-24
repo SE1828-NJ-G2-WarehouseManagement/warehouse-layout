@@ -22,6 +22,7 @@ import { ZoneProvider } from '../context/ZoneContext';
 import { SupplierProvider } from '../context/SupplierContext';
 import { CategoryProvider } from '../context/CategoryContext';
 import { ProductProvider } from "../context/ProductContext";
+import { WarehouseProvider } from '../context/WarehouseContext';
 
 
 const formatKeyForDisplay = (key) => {
@@ -141,7 +142,8 @@ const ManagerMainLayout = () => {
               path="zone-management"
               element={
                 <ZoneProvider>
-                  <ZoneManagement />
+                  <WarehouseProvider><ZoneManagement /></WarehouseProvider>
+                  {/* <ZoneManagement /> */}
                 </ZoneProvider>
               }
             />

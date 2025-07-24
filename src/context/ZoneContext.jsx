@@ -38,9 +38,31 @@ const ZoneProvider = ({ children }) => {
         }
     };
 
+    const fetchZoneNoPagination = async () => {
+        setLoading(true);
+        try {
+            const response = await zoneService.getZone();
+            if (Array.isArray(response)) {
+                setZones(response);
+                setTotalItem(response.length);
+            } else {
+                console.warn("Invalid response for all zones:", response);
+                setZones([]);
+                setTotalItem(0);
+            }
+        } catch (error) {
+            console.error("Error fetching all zones:", error);
+            toast.error(error.message || "Failed to load all zones.");
+            setZones([]);
+            setTotalItem(0);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const fetchAllZonesTotalCapacity = async () => {
         try {
-            const allZonesData = await zoneService.getAllZonesNonPaginated();
+            const allZonesData = await zoneService?.getAllZonesNonPaginated();
             if (Array.isArray(allZonesData)) {
                 const totalCalculatedCapacity = allZonesData?.reduce((sum, zone) => sum + (zone?.totalCapacity || 0), 0);
                 setAllZonesTotalCapacity(totalCalculatedCapacity);
@@ -57,7 +79,7 @@ const ZoneProvider = ({ children }) => {
 
     const createZone = async (zoneData) => {
         try {
-            const response = await zoneService.createZone(zoneData);
+            const response = await zoneService?.createZone(zoneData);
             setZones(prevZones => [...prevZones, response.data]); 
             toast.success(response.message || "Zone created successfully!");
             return { success: true, data: response.data }; 
@@ -71,7 +93,7 @@ const ZoneProvider = ({ children }) => {
 
     const updateZone = async (zoneId, zoneData) => {
         try {
-            const response = await zoneService.updateZone(zoneId, zoneData);
+            const response = await zoneService?.updateZone(zoneId, zoneData);
             setZones(prevZones => prevZones.map(zone => (zone.id === zoneId ? response.data : zone)));
             toast.success(response.message || "Zone updated successfully!");
             return { success: true, data: response.data }; 
@@ -84,7 +106,7 @@ const ZoneProvider = ({ children }) => {
 
     const changeZoneStatus = async (zoneId, status) => {
         try {   
-            const response = await zoneService.changeStatusZone(zoneId, status);
+            const response = await zoneService?.changeStatusZone(zoneId, status);
             setZones(prevZones => prevZones.map(zone => (zone.id === zoneId ? { ...zone, status } : zone)));
             toast.success(response.message || "Zone status updated successfully!");
             return { success: true, data: response.data }; 
@@ -96,7 +118,7 @@ const ZoneProvider = ({ children }) => {
     };
 
     return (
-        <ZoneContext.Provider value={{ zones, loading, fetchZones, createZone, updateZone, pageIndex, setPageIndex, totalItem, allZonesTotalCapacity, changeZoneStatus, setPageSize, pageSize, setDataParams,dataParams }}>
+        <ZoneContext.Provider value={{ zones, loading, fetchZones, createZone, updateZone, pageIndex, setPageIndex, totalItem, allZonesTotalCapacity, changeZoneStatus, setPageSize, pageSize, setDataParams,dataParams, fetchZoneNoPagination }}>
             {children}
         </ZoneContext.Provider>
     );

@@ -26,6 +26,23 @@ const WarehouseProvider = ({ children }) => {
     }
   };
 
+  const getCapacityByWarehouse = async () => {
+    if (loading) return warehouses;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await warehouseService.getCapacityByWarehouse();
+      setWarehouses(data || []);
+      return data;
+    } catch (error) {
+      setError(error.message);
+      setWarehouses([]);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <WarehouseContext.Provider
       value={{
@@ -33,6 +50,7 @@ const WarehouseProvider = ({ children }) => {
         loading,
         error,
         getWarehouseZonesCapacity,
+        getCapacityByWarehouse
       }}
     >
       {children}

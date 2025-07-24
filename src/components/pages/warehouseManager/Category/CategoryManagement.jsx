@@ -101,9 +101,9 @@ const CategoryManagement = () => {
       key: 'name',
       width: '20%',
       render: (name, record) => {
-        if (record.requestType === 'UPDATE' && record.pendingChanges?.name) {
-          return record.pendingChanges.name;
-        }
+        // if (record.requestType === 'UPDATE' && record.pendingChanges?.name) {
+        //   return record.pendingChanges.name;
+        // }
         return name;
       },
     },
