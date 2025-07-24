@@ -113,10 +113,13 @@ const ZoneManagement = () => {
                 totalCapacity: values.totalCapacity,
             };
             const result = await createZone(payload);
-            await fetchZones();
             console.log("createZone API result:", result);
+            if(result?.success){
+            await fetchZones();
             setIsCreateModalOpen(false);
             createForm.resetFields();
+            }
+
         } catch (error) {
             console.error('Failed to create zone in component (catch block):', error);
         }

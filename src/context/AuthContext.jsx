@@ -104,21 +104,20 @@ const AuthProvider = ({ children }) => {
             }
 
             const result = await userService.updateProfile(formData);
-
+            toast.success(result?.message || "Profile updated successfully!");
             if (result?.isSuccess && result.user) {
                 setUser(result.user);
                 localStorage.setItem("user", JSON.stringify(result.user));
                 if (result.user.email) {
                     localStorage.setItem("email", result.user.email);
                 }
-                toast.success(result.message || "Profile updated successfully!");
                 return { success: true, user: result.user };
             } else {
-                toast.error(result?.message || "Failed to update profile.");
+                // toast.error(result?.message || "Failed to update profile.");
                 return { success: false, message: result?.message };
             }
         } catch (error) {
-            toast.error(error.message || "Failed to update profile.");
+            toast.error("Failed to update profile.");
             return { success: false, message: error.message };
         } finally {
             setLoading(false);
