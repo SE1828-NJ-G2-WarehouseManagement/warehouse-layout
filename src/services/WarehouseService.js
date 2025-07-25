@@ -15,6 +15,7 @@ const warehouseService = {
     }
   },
 
+  
   async getCapacityByWarehouse() {
     try {
       const response = await axiosInstance.get(`${this.url}/capacity`, {
