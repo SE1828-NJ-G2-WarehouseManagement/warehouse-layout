@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../config/axios";
+import useSocket from "../../config/socket";
 
 const Header = ({
   collapsed,
@@ -39,35 +40,46 @@ const Header = ({
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotificationPanel, setShowNotificationPanel] = useState(false);
 
+  useSocket({
+    assignedWarehouse: user?.assignedWarehouse,
+    onNotification: (data) => {
+      setNotifications((prev) => [data, ...prev]);
+      setUnreadCount((prev) => prev + 1);
+    },
+  });
+
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const res = await axiosInstance.get("/notifications");
-
         const data = res.data?.data || [];
 
         setNotifications(data);
-        setUnreadCount(data.filter((n) => !n.isRead).length);
+
+        const unread = data.filter(
+          (n) => !n.readBy?.includes(user._id) // Based on new readBy logic
+        );
+        setUnreadCount(unread.length);
       } catch (err) {
         console.error("Failed to fetch notifications", err);
       }
     };
 
-    fetchNotifications();
-  }, []);
+    if (user?._id) fetchNotifications();
+  }, [user]);
 
   const handleToggleNotificationPanel = async () => {
     const nextState = !showNotificationPanel;
     setShowNotificationPanel(nextState);
-  
+
     if (nextState) {
       try {
-        // Đánh dấu tất cả là đã đọc khi panel được mở
         await axiosInstance.put("/notifications/mark-all-read");
-  
-        // Cập nhật lại UI
         setNotifications((prev) =>
-          prev.map((n) => ({ ...n, isRead: true }))
+          prev.map((n) => ({
+            ...n,
+            readBy: [...(n.readBy || []), user._id],
+          }))
         );
         setUnreadCount(0);
       } catch (err) {
