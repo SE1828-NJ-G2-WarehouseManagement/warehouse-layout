@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     host: '0.0.0.0', // allow external access
-    port: 5173,
+    port: 5174,
     allowedHosts: ['warehouse-g2.online'], // prevent blocked request error
   },
 })
