@@ -45,7 +45,104 @@ const InternalWarehouseTransfer = () => {
   const loadedWarehouseRef = useRef(null);
   const warehousesLoadedRef = useRef(false);
 
-  // Gọi API warehouses trực tiếp
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  const productDropdownRef = useRef(null);
+
+  const [warehouseSearchTerm, setWarehouseSearchTerm] = useState("");
+  const [isWarehouseDropdownOpen, setIsWarehouseDropdownOpen] = useState(false);
+  const warehouseDropdownRef = useRef(null);
+
+    const productsWithWarehouseInfo = useMemo(() => {
+      if (!productsInZone || productsInZone.length === 0) return [];
+      return productsInZone
+        .filter((item) => item.itemId && item.productName)
+        .map((item, index) => ({
+          id: item.itemId,
+          zoneItemId: item.zoneItemId,
+          name: item.productName,
+          zoneName: item.zoneName,
+          quantity: item.quantity,
+          expiredDate: item.expiredDate,
+          density: item.productDensity || 1,
+          weights: item.itemWeights || 1,
+          capacity: item.itemWeights / item.productDensity,
+          requiredTemperatureMin: item.productStorageTemperature?.min ?? "",
+          requiredTemperatureMax: item.productStorageTemperature?.max ?? "",
+          uniqueKey: `${item.itemId}-${index}`,
+        }));
+    }, [productsInZone]);
+    
+const availableProductsToAdd = useMemo(() => {
+  const addedProductIds = new Set(transferItems.map((item) => item.productId));
+  return productsWithWarehouseInfo.filter(
+    (product) => !addedProductIds.has(product.id)
+  );
+}, [transferItems, productsWithWarehouseInfo]);
+const availableDestinationWarehouses = useMemo(() => {
+  if (!warehouses || warehouses.length === 0) {
+    return [];
+  }
+
+  const filtered = warehouses.filter(
+    (warehouse) => warehouse.warehouseId !== currentWarehouseId
+  );
+
+  return filtered;
+}, [warehouses, currentWarehouseId]);
+  const filteredProductsToAdd = useMemo(() => {
+    return availableProductsToAdd.filter(
+      (product) =>
+        product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+        product.zoneName.toLowerCase().includes(productSearchTerm.toLowerCase())
+    );
+  }, [availableProductsToAdd, productSearchTerm]);
+
+  const filteredDestinationWarehouses = useMemo(() => {
+    return availableDestinationWarehouses.filter((warehouse) =>
+      warehouse.warehouseName
+        .toLowerCase()
+        .includes(warehouseSearchTerm.toLowerCase())
+    );
+  }, [availableDestinationWarehouses, warehouseSearchTerm]);
+
+  const productMap = useMemo(
+    () => new Map(availableProductsToAdd.map((p) => [p.id, p]) || []),
+    [availableProductsToAdd]
+  );
+
+  const warehouseMap = useMemo(
+    () =>
+      new Map(
+        availableDestinationWarehouses.map((w) => [w.warehouseId, w]) || []
+      ),
+    [availableDestinationWarehouses]
+  );
+
+
+  // Handle click outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        productDropdownRef.current &&
+        !productDropdownRef.current.contains(event.target)
+      ) {
+        setIsProductDropdownOpen(false);
+      }
+      if (
+        warehouseDropdownRef.current &&
+        !warehouseDropdownRef.current.contains(event.target)
+      ) {
+        setIsWarehouseDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const loadWarehouses = async () => {
     if (warehousesLoadedRef.current || warehouseLoading) return;
 
@@ -54,26 +151,16 @@ const InternalWarehouseTransfer = () => {
     warehousesLoadedRef.current = true;
 
     try {
-      console.log("🏭 Loading warehouses from API...");
       const response = await axiosInstance.get("/warehouses/zones-capacity", {
         requiresAuth: true,
       });
 
-      // console.log("🏭 API Response:", response.data);
-
       if (response.data && Array.isArray(response.data)) {
         setWarehouses(response.data);
-        console.log(
-          "🏭 Warehouses loaded successfully:",
-          response.data.length,
-          "items"
-        );
       } else {
-        // console.error("🏭 Invalid response format:", response.data);
         setWarehouses([]);
       }
     } catch (error) {
-      console.error("🏭 Error loading warehouses:", error);
       setWarehouseError(error.message);
       setWarehouses([]);
       warehousesLoadedRef.current = false;
@@ -103,7 +190,6 @@ const InternalWarehouseTransfer = () => {
       loadingRef.current = true;
 
       try {
-        // console.log("📦 Loading products for warehouse:", warehouseId);
         setCurrentWarehouseId(warehouseId);
 
         if (
@@ -134,44 +220,10 @@ const InternalWarehouseTransfer = () => {
   }, [user?.assignedWarehouse, getAllProductsInZone, resetProducts]);
 
   // Transform API data to component format
-  const productsWithWarehouseInfo = useMemo(() => {
-    if (!productsInZone || productsInZone.length === 0) return [];
-    return productsInZone
-      .filter((item) => item.itemId && item.productName)
-      .map((item, index) => ({
-        id: item.itemId,
-        zoneItemId: item.zoneItemId,
-        name: item.productName,
-        zoneName: item.zoneName,
-        quantity: item.quantity,
-        expiredDate: item.expiredDate,
-        density: item.productDensity || 1,
-        weights: item.itemWeights || 1,
-        capacity: (item.itemWeights) / (item.productDensity) ,
-        requiredTemperatureMin: item.productStorageTemperature?.min ?? "",
-        requiredTemperatureMax: item.productStorageTemperature?.max ?? "",
-        uniqueKey: `${item.itemId}-${index}`,
-      }));
-  }, [productsInZone]);
+
 
   // Transform warehouses data để exclude current warehouse
-  const availableDestinationWarehouses = useMemo(() => {
-    // console.log("🏭 Computing availableDestinationWarehouses");
-    // console.log("🏭 Warehouses:", warehouses);
-    // console.log("🏭 Current warehouse ID:", currentWarehouseId);
-
-    if (!warehouses || warehouses.length === 0) {
-      // console.log("🏭 No warehouses available");
-      return [];
-    }
-
-    const filtered = warehouses.filter(
-      (warehouse) => warehouse.warehouseId !== currentWarehouseId
-    );
-
-    // console.log("🏭 Filtered warehouses:", filtered);
-    return filtered;
-  }, [warehouses, currentWarehouseId]);
+  
 
   // Get current source warehouse info
   const sourceWarehouse = useMemo(() => {
@@ -190,14 +242,7 @@ const InternalWarehouseTransfer = () => {
   }, [currentWarehouseId, warehouses]);
 
   // List of products available to add to the transfer request
-  const availableProductsToAdd = useMemo(() => {
-    const addedProductIds = new Set(
-      transferItems.map((item) => item.productId)
-    );
-    return productsWithWarehouseInfo.filter(
-      (product) => !addedProductIds.has(product.id)
-    );
-  }, [transferItems, productsWithWarehouseInfo]);
+  
 
   // Calculate total capacity required for the transfer
   const totalRequiredCapacity = useMemo(() => {
@@ -211,13 +256,11 @@ const InternalWarehouseTransfer = () => {
 
   // Handle warehouse selection to show details
   const handleWarehouseSelection = (warehouseId) => {
-    // console.log("🏭 Warehouse selected:", warehouseId);
     setDestinationWarehouse(warehouseId);
 
     const selectedWarehouse = warehouses.find(
       (wh) => wh.warehouseId === warehouseId
     );
-    console.log("🏭 Selected warehouse details:", selectedWarehouse);
     setSelectedWarehouseDetails(selectedWarehouse);
   };
 
@@ -404,31 +447,62 @@ const InternalWarehouseTransfer = () => {
 
         {/* Add product to transfer list */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          <div className="md:col-span-2">
+          <div className="md:col-span-2 relative" ref={productDropdownRef}>
             <label
               htmlFor="productToAddSelect"
               className="block text-lg font-medium text-gray-700 mb-2"
             >
               Add product to request:
             </label>
-            <select
-              id="productToAddSelect"
+            <input
+              type="text"
               className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm"
-              value={selectedProductToAdd}
-              onChange={(e) => setSelectedProductToAdd(e.target.value)}
+              placeholder="Search product..."
+              value={
+                selectedProductToAdd
+                  ? productMap.get(selectedProductToAdd)?.name ||
+                    productSearchTerm
+                  : productSearchTerm
+              }
+              onChange={(e) => {
+                setProductSearchTerm(e.target.value);
+                if (!isProductDropdownOpen) {
+                  setSelectedProductToAdd("");
+                }
+                setIsProductDropdownOpen(true);
+              }}
+              onFocus={() => setIsProductDropdownOpen(true)}
               disabled={zoneLoading}
-            >
-              <option value="">-- Select a product --</option>
-              {availableProductsToAdd.map((product) => (
-                <option key={product.uniqueKey} value={product.id}>
-                  {product.name} - Zone: {product.zoneName} (Quantity:{" "}
-                  {product.quantity}) - Exp:{" "}
-                  {product.expiredDate
-                    ? new Date(product.expiredDate).toLocaleDateString()
-                    : "N/A"}
-                </option>
-              ))}
-            </select>
+            />
+            {isProductDropdownOpen && (
+              <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
+                {filteredProductsToAdd.length > 0 ? (
+                  filteredProductsToAdd.map((product) => (
+                    <div
+                      key={product.uniqueKey}
+                      className="p-2 cursor-pointer hover:bg-blue-100 text-sm"
+                      onClick={() => {
+                        setSelectedProductToAdd(product.id);
+                        setProductSearchTerm(product.name);
+                        setIsProductDropdownOpen(false);
+                      }}
+                    >
+                      <div className="font-medium">{product.name}</div>
+                      <div className="text-gray-600 text-xs">
+                        Zone: {product.zoneName} | Qty: {product.quantity} |
+                        Exp:{" "}
+                        {product.expiredDate
+                          ? new Date(product.expiredDate).toLocaleDateString()
+                          : "N/A"}{" "}
+                        | Weight: {product.weights}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-2 text-gray-500">No products found.</div>
+                )}
+              </div>
+            )}
           </div>
           <button
             type="button"
@@ -518,7 +592,7 @@ const InternalWarehouseTransfer = () => {
                             size={16}
                             className="mr-1 text-purple-600"
                           />
-                          {(product.capacity * item.quantity).toFixed(2)} m³
+                          {product.capacity.toFixed(2)} m³
                         </div>
                       </td>
                       <td className="px-3 py-2 text-center text-gray-700">
@@ -555,29 +629,60 @@ const InternalWarehouseTransfer = () => {
         )}
 
         {/* Destination Warehouse */}
-        <div className="form-group">
+        <div className="form-group relative" ref={warehouseDropdownRef}>
           <label
             htmlFor="destinationWarehouseSelect"
             className="block text-lg font-medium text-gray-700 mb-2"
           >
             Destination Warehouse: <span className="text-red-500">*</span>
           </label>
-          <select
-            id="destinationWarehouseSelect"
+          <input
+            type="text"
             className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm"
-            value={destinationWarehouse}
-            onChange={(e) => handleWarehouseSelection(e.target.value)}
-            required
+            placeholder="Search destination warehouse..."
+            value={
+              destinationWarehouse
+                ? warehouseMap.get(destinationWarehouse)?.warehouseName ||
+                  warehouseSearchTerm
+                : warehouseSearchTerm
+            }
+            onChange={(e) => {
+              setWarehouseSearchTerm(e.target.value);
+              if (!isWarehouseDropdownOpen) {
+                setDestinationWarehouse("");
+                setSelectedWarehouseDetails(null);
+              }
+              setIsWarehouseDropdownOpen(true);
+            }}
+            onFocus={() => setIsWarehouseDropdownOpen(true)}
             disabled={warehouseLoading}
-          >
-            <option value="">-- Select Destination Warehouse --</option>
-            {availableDestinationWarehouses.map((wh) => (
-              <option key={wh.warehouseId} value={wh.warehouseId}>
-                {wh.warehouseName} (Available:{" "}
-                {wh.warehouseCapacity?.available?.toFixed(2) || 0} m³)
-              </option>
-            ))}
-          </select>
+            required
+          />
+          {isWarehouseDropdownOpen && (
+            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
+              {filteredDestinationWarehouses.length > 0 ? (
+                filteredDestinationWarehouses.map((wh) => (
+                  <div
+                    key={wh.warehouseId}
+                    className="p-2 cursor-pointer hover:bg-blue-100"
+                    onClick={() => {
+                      handleWarehouseSelection(wh.warehouseId);
+                      setWarehouseSearchTerm(wh.warehouseName);
+                      setIsWarehouseDropdownOpen(false);
+                    }}
+                  >
+                    <div className="font-medium">{wh.warehouseName}</div>
+                    <div className="text-gray-600 text-sm">
+                      Available:{" "}
+                      {wh.warehouseCapacity?.available?.toFixed(2) || 0} m³
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-2 text-gray-500">No warehouses found.</div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Warehouse Details */}

@@ -28,11 +28,13 @@ import {
 } from "@ant-design/icons";
 import axios from "axios";
 import dayjs from "dayjs";
-
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 const { Title, Text } = Typography;
 const { Option } = Select;
-
-const API_BASE = "http://localhost:8080/api/v1";
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
+const API_BASE = "http://localhost:9999/api/v1";
 const getAuthHeaders = () => ({
   headers: {
     Authorization: `Bearer ${JSON.parse(localStorage.getItem("access_token"))}`,
@@ -99,12 +101,16 @@ const IncomingShipmentsApproval = () => {
    if (statusFilter) {
      filtered = filtered.filter((req) => req.status === statusFilter);
    }
-   if (dateRange && dateRange.length === 2) {
+   if (dateRange && dateRange.length === 2 && dateRange[0] && dateRange[1]) {
      filtered = filtered.filter((req) => {
+       if (!req.createdAt) return false;
+
        const created = dayjs(req.createdAt);
+       const startDate = dayjs(dateRange[0]).startOf("day");
+       const endDate = dayjs(dateRange[1]).endOf("day");
+
        return (
-         created.isSameOrAfter(dateRange[0], "day") &&
-         created.isSameOrBefore(dateRange[1], "day")
+         created.isSameOrAfter(startDate) && created.isSameOrBefore(endDate)
        );
      });
    }
@@ -558,7 +564,9 @@ const IncomingShipmentsApproval = () => {
               >
                 {zones.map((zone) => (
                   <Option key={zone.zoneId} value={zone.zoneId}>
-                    {zone.zoneName} (Available: {zone.capacity?.available} m³)
+                    {zone.zoneName}-(Available: {zone.capacity?.available}{" "}
+                    m³)({zone.storageTemperature?.min}°C ~{" "}
+                    {zone.storageTemperature?.max}°C)
                   </Option>
                 ))}
               </Select>

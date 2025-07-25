@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext, useMemo } from "react";
 import { Edit, Image as ImageIcon, X, AlertCircle } from "lucide-react";
 import { ProductContext } from "../../../context/ProductContext";
 import CategoryService from "../../../services/categoryService";
@@ -23,9 +23,45 @@ const EditProduct = ({
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [categoriesName, setCategoriesName] = useState([]);
   const fileInputRef = useRef(null);
 
+   const [categorySearchTerm, setCategorySearchTerm] = useState("");
+   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+   const categoryDropdownRef = useRef(null);
+
   const { uploadProductImage, updateProduct } = useContext(ProductContext);
+
+  const categoryMap = useMemo(
+    () => new Map(categoriesName?.map((c) => [c._id, c]) || []),
+    [categoriesName]
+  );
+
+  // Filter categories based on search
+  const filteredCategories = useMemo(
+    () =>
+      categories?.filter((category) =>
+        category.name.toLowerCase().includes(categorySearchTerm.toLowerCase())
+      ) || [],
+    [categories, categorySearchTerm]
+  );
+
+  // Handle click outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        categoryDropdownRef.current &&
+        !categoryDropdownRef.current.contains(event.target)
+      ) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -33,6 +69,22 @@ const EditProduct = ({
         const categoryService = new CategoryService();
         const data = await categoryService.getActiveCategories();
         setCategories(data);
+      } catch (err) {
+        setErrors((prev) => ({
+          ...prev,
+          categoryId: "Failed to load categories",
+        }));
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categoryService = new CategoryService();
+        const data = await categoryService.getAllCategory();
+        setCategoriesName(data);
       } catch (err) {
         setErrors((prev) => ({
           ...prev,
@@ -103,8 +155,7 @@ const EditProduct = ({
         },
         image: imageUrl,
       };
-console.log("minStorageTemp:", minStorageTemp, "maxStorageTemp:", maxStorageTemp);
-console.log("updatedData:", updatedData);
+
 
       await updateProduct(updatedData);
       onSubmit(updatedData);
@@ -125,6 +176,11 @@ console.log("updatedData:", updatedData);
     }
   };
 
+  const getCategoryNameById = (id) => {
+    const category = categoriesName.find((cat) => cat._id === id);
+    return category ? category.name : "Unknown Category";
+  };
+  
   const handleRemoveImage = () => {
     setImageFile(null);
     setImagePreview(initialData.image);
@@ -165,24 +221,63 @@ console.log("updatedData:", updatedData);
             )}
           </div>
 
-          <div>
+          <div className="relative" ref={categoryDropdownRef}>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Category
             </label>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+            {categoryId && (
+              <div className="mb-2 p-2 bg-gray-100 rounded border">
+                <span className="text-sm text-gray-600">Current: </span>
+                <span className="font-medium">
+                  {getCategoryNameById(categoryId)}
+                </span>
+              </div>
+            )}
+            <input
+              type="text"
               className={`w-full p-2 border rounded ${
                 errors.categoryId ? "border-red-500" : "border-gray-300"
               }`}
-            >
-              <option value="">Select Category</option>
-              {categories.map((cat) => (
-                <option key={cat._id} value={cat._id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+              placeholder="Search category..."
+              value={
+                categoryId && !isCategoryDropdownOpen
+                  ? categories.find((cat) => cat._id === categoryId)?.name ||
+                    categorySearchTerm
+                  : categorySearchTerm
+              }
+              onChange={(e) => {
+                setCategorySearchTerm(e.target.value);
+                if (!isCategoryDropdownOpen) {
+                  setCategoryId("");
+                }
+                setIsCategoryDropdownOpen(true);
+                setErrors((prev) => ({ ...prev, categoryId: "" }));
+              }}
+              onFocus={() => setIsCategoryDropdownOpen(true)}
+              disabled={loading}
+            />
+            {isCategoryDropdownOpen && (
+              <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
+                {filteredCategories.length > 0 ? (
+                  filteredCategories.map((category) => (
+                    <div
+                      key={category._id}
+                      className="p-2 cursor-pointer hover:bg-blue-100"
+                      onClick={() => {
+                        setCategoryId(category._id);
+                        setCategorySearchTerm(category.name);
+                        setIsCategoryDropdownOpen(false);
+                        setErrors((prev) => ({ ...prev, categoryId: "" }));
+                      }}
+                    >
+                      {category.name}
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-2 text-gray-500">No categories found.</div>
+                )}
+              </div>
+            )}
             {errors.categoryId && (
               <p className="text-red-500 text-sm mt-1">{errors.categoryId}</p>
             )}

@@ -12,6 +12,7 @@ import {
   Select,
   Pagination,
   Form,
+  DatePicker,
 } from "antd";
 import {
   EyeOutlined,
@@ -19,12 +20,17 @@ import {
   BoxPlotOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import { ProductContext } from "../../../../context/ProductContext";
 import ProductRequestDetailsModal from "./ProductRequestDetailsModal.jsx";
 import ProductRejectionReasonModal from "./ProductRejectionReasonModal.jsx";
 
 const { Title } = Typography;
 const { Option } = Select;
+
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 
 const STATUS_COLOR = {
   ACTIVE: "green",
@@ -70,7 +76,8 @@ const ProductManagement = () => {
 
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
   const [selectedTypeFilter, setSelectedTypeFilter] = useState("All");
-
+const [dateRange, setDateRange] = useState([]);
+const { RangePicker } = DatePicker;
   useEffect(() => {
     fetchAllProducts();
   }, [fetchAllProducts]);
@@ -128,6 +135,21 @@ const ProductManagement = () => {
         (item) => item.type && item.type === selectedTypeFilter
       );
     }
+    if (dateRange && dateRange.length === 2 && dateRange[0] && dateRange[1]) {
+      data = data.filter((item) => {
+        if (!item.dateSubmitted) return false;
+
+        const submitted = dayjs(item.dateSubmitted);
+        const startDate = dayjs(dateRange[0]).startOf("day");
+        const endDate = dayjs(dateRange[1]).endOf("day");
+
+        return (
+          submitted.isSameOrAfter(startDate) &&
+          submitted.isSameOrBefore(endDate)
+        );
+      });
+    }
+
     // Sort: PENDING > APPROVED > REJECTED > ACTIVE > INACTIVE, mới nhất lên đầu
     const statusOrder = {
       PENDING: 1,
@@ -153,6 +175,7 @@ const ProductManagement = () => {
     searchTerm,
     selectedStatusFilter,
     selectedTypeFilter,
+    dateRange,
     currentPage,
     pageSize,
   ]);
@@ -252,6 +275,7 @@ const ProductManagement = () => {
       await approveProduct(currentDisplayRequest.id);
       message.success("Approved successfully!");
       handleDetailsModalCancel();
+      await fetchAllProducts();
     } catch (error) {
       message.error("Failed to approve request.");
     } finally {
@@ -267,6 +291,7 @@ const ProductManagement = () => {
       message.success("Rejected successfully!");
       handleRejectModalCancel();
       handleDetailsModalCancel();
+      await fetchAllProducts();
     } catch (error) {
       message.error("Failed to reject request.");
     } finally {
@@ -371,7 +396,7 @@ const ProductManagement = () => {
         <Space direction="vertical" size="large" style={{ width: "100%" }}>
           <div className="flex flex-wrap gap-4 items-center">
             <Input
-              placeholder="Search by name, submitted by, date (DD/MM/YYYY)..."
+              placeholder="Search by name, submitted by"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ width: 400 }}
@@ -406,6 +431,16 @@ const ProductManagement = () => {
               <Option value="UPDATE">UPDATE</Option>
               <Option value="STATUS_CHANGE">STATUS_CHANGE</Option>
             </Select>
+            <RangePicker
+              value={dateRange}
+              onChange={(dates) => {
+                setDateRange(dates);
+              }}
+              format="DD/MM/YYYY"
+              style={{ width: 300 }}
+              allowClear
+              placeholder={["Start Date", "End Date"]}
+            />
           </div>
 
           <Table
