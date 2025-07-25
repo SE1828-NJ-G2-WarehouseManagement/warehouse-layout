@@ -111,5 +111,21 @@ class CategoryService {
       throw new Error(errorMessage);
     }
   }
+
+  async getAllCategory() {
+    try {
+      const response = await axiosInstance.get(`${this.url}`, {
+        requiresAuth: true,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error in CategoryService.getActiveCategories:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "An unknown error occurred while fetching active categories.";
+      throw new Error(errorMessage);
+    }
+  }
 }
 export default CategoryService;

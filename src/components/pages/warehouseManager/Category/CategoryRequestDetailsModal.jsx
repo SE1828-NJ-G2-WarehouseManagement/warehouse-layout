@@ -275,7 +275,7 @@ const CategoryRequestDetailsModal = ({
                   <Card
                     title={
                       <Title level={5} className="text-red-600 mb-0">
-                        New Data
+                        Old Data
                       </Title>
                     }
                     className="shadow-sm border border-red-200 p-4 rounded-lg"
@@ -296,7 +296,7 @@ const CategoryRequestDetailsModal = ({
                   <Card
                     title={
                       <Title level={5} className="text-green-600 mb-0">
-                        Old Data
+                        New Data
                       </Title>
                     }
                     className="shadow-sm border border-green-200 p-4 rounded-lg"

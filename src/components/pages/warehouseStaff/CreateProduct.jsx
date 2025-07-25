@@ -1,4 +1,4 @@
-import React, { useState, useRef, useContext } from "react";
+import React, { useState, useRef, useContext, useMemo, useEffect } from "react";
 import { PlusCircle, Image as ImageIcon, X, AlertCircle } from "lucide-react";
 import { ProductContext } from "../../../context/ProductContext";
 
@@ -18,8 +18,42 @@ const CreateProduct = ({
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
+const [categorySearchTerm, setCategorySearchTerm] = useState("");
+const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+const categoryDropdownRef = useRef(null);
 
   const { uploadProductImage, createProduct } = useContext(ProductContext);
+
+  const categoryMap = useMemo(
+    () => new Map(categories?.map((c) => [c._id, c]) || []),
+    [categories]
+  );
+
+  // Filter categories based on search
+  const filteredCategories = useMemo(
+    () =>
+      categories?.filter((category) =>
+        category.name.toLowerCase().includes(categorySearchTerm.toLowerCase())
+      ) || [],
+    [categories, categorySearchTerm]
+  );
+
+  // Handle click outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        categoryDropdownRef.current &&
+        !categoryDropdownRef.current.contains(event.target)
+      ) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const validateForm = () => {
     const newErrors = {};
@@ -150,32 +184,55 @@ const CreateProduct = ({
               </p>
             )}
           </div>
-          <div>
+          <div className="relative" ref={categoryDropdownRef}>
             <label
               htmlFor="categoryId"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
               Category
             </label>
-            <select
-              id="categoryId"
+            <input
+              type="text"
               className={`w-full p-3 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${
                 errors.categoryId ? "border-red-500" : "border-gray-300"
               }`}
-              value={categoryId}
+              placeholder="Search category..."
+              value={
+                categoryId
+                  ? categoryMap.get(categoryId)?.name
+                  : categorySearchTerm
+              }
               onChange={(e) => {
-                setCategoryId(e.target.value);
+                setCategorySearchTerm(e.target.value);
+                setCategoryId("");
+                setIsCategoryDropdownOpen(true);
                 setErrors((prev) => ({ ...prev, categoryId: "" }));
               }}
-            >
-              <option value="">Select a category</option>
-              {categories &&
-                categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.name}
-                  </option>
-                ))}
-            </select>
+              onFocus={() => setIsCategoryDropdownOpen(true)}
+              disabled={loading}
+            />
+            {isCategoryDropdownOpen && (
+              <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
+                {filteredCategories.length > 0 ? (
+                  filteredCategories.map((category) => (
+                    <div
+                      key={category._id}
+                      className="p-2 cursor-pointer hover:bg-blue-100"
+                      onClick={() => {
+                        setCategoryId(category._id);
+                        setCategorySearchTerm(category.name);
+                        setIsCategoryDropdownOpen(false);
+                        setErrors((prev) => ({ ...prev, categoryId: "" }));
+                      }}
+                    >
+                      {category.name}
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-2 text-gray-500">No categories found.</div>
+                )}
+              </div>
+            )}
             {errors.categoryId && (
               <p className="mt-1 text-sm text-red-600 flex items-center">
                 <AlertCircle className="size-4 mr-1" />

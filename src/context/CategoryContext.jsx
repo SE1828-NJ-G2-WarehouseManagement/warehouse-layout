@@ -94,10 +94,45 @@ const CategoryProvider = ({ children }) => {
         }
     }
 
+    const fetchAllCategory = async (params) => {
+      setLoading(true);
+      try {
+        const response = await categoryService.getAllCategory(params);
+        setAllCategories(response?.data);
+        setTotalItem(response?.total || 0);
+      } catch (error) {
+        console.error("Error fetching all categories:", error);
+        toast.error("Failed to fetch all categories.");
+        setAllCategories([]);
+        setTotalItem(0);
+      } finally {
+        setLoading(false);
+        console.log("Fetching all categories - END");
+      }
+    };
+
     return (
-        <CategoryContext.Provider value={{ allCategories, loading, pageIndex, pageSize, totalItem, fetchAllCategories, fetchCategoryById, setPageIndex, setPageSize, approvalCategory, rejectCategory, searchCategoriesByTerm,dataParams,setDataParams }}>
-            {children}
-        </CategoryContext.Provider>
+      <CategoryContext.Provider
+        value={{
+          allCategories,
+          loading,
+          pageIndex,
+          pageSize,
+          totalItem,
+          fetchAllCategories,
+          fetchCategoryById,
+          setPageIndex,
+          setPageSize,
+          approvalCategory,
+          rejectCategory,
+          searchCategoriesByTerm,
+          dataParams,
+          setDataParams,
+          fetchAllCategory,
+        }}
+      >
+        {children}
+      </CategoryContext.Provider>
     );
 }
 export { CategoryContext, CategoryProvider };

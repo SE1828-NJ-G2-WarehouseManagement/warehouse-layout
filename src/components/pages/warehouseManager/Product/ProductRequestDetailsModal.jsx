@@ -177,11 +177,11 @@ const ProductRequestDetailsModal = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Card
                     title={
-                      <Title level={5} className="text-green-600 mb-0">
-                        New Data
+                      <Title level={5} className="text-red-600 mb-0">
+                        Old Data
                       </Title>
                     }
-                    className="shadow-sm border border-green-200 p-4 rounded-lg"
+                    className="shadow-sm border border-red-200 p-4 rounded-lg"
                   >
                     <Descriptions
                       column={1}
@@ -224,11 +224,11 @@ const ProductRequestDetailsModal = ({
                   </Card>
                   <Card
                     title={
-                      <Title level={5} className="text-red-600 mb-0">
-                        Old Data
+                      <Title level={5} className="text-green-600 mb-0">
+                        New Data
                       </Title>
                     }
-                    className="shadow-sm border border-red-200 p-4 rounded-lg"
+                    className="shadow-sm border border-green-200 p-4 rounded-lg"
                   >
                     <Descriptions
                       column={1}
