@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 
 
-const ModalEditZone = ({ isEditModalOpen, handleEditCancel, editForm, handleEditSubmit, currentWarehouseTotalCapacity, loading, currentZone, allZonesTotalCapacity, zones }) => {
+const ModalEditZone = ({ isEditModalOpen, handleEditCancel, editForm, handleEditSubmit, currentWarehouseTotalCapacity, loading, currentZone, allZonesTotalCapacity }) => {
     return (
         <Modal
             title={<Title level={4} className="text-center mb-6">Edit Zone</Title>}
@@ -32,22 +32,7 @@ const ModalEditZone = ({ isEditModalOpen, handleEditCancel, editForm, handleEdit
                         name="name"
                         rules={[
                             { required: true, message: 'Zone name is required.' },
-                            { min: 3, message: 'Zone name must be at least 3 characters.' },
-                            // eslint-disable-next-line no-unused-vars
-                            ({ getFieldValue }) => ({
-                                validator(_, value) {
-                                    if (!value) {
-                                        return Promise?.resolve(); 
-                                    }
-                                    const isDuplicate = zones?.some(
-                                        (zone) => zone?.name?.toLowerCase() === value?.toLowerCase()
-                                    );
-                                    if (isDuplicate) {
-                                        return Promise?.reject(new Error('Zone name must be unique.'));
-                                    }
-                                    return Promise.resolve();
-                                },
-                            }),
+                            { min: 3, message: 'Zone name must be at least 3 characters.' }
                         ]}
                         className="mb-4 md:col-span-2"
                     >
