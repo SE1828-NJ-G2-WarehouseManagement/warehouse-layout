@@ -12,7 +12,7 @@ const useSocket = ({ assignedWarehouse, onNotification }) => {
         transports: ["websocket"],
       });
 
-      // Kết nối thành công
+      // Kết nối thành công 
       socketRef.current.on("connect", () => {
         console.log("Socket connected:", socketRef.current.id);
         socketRef.current.emit("join", assignedWarehouse);
