@@ -58,7 +58,7 @@ const [showRejectedNote, setShowRejectedNote] = useState("");
 
  const handleChangeActivityStatus = useCallback(
    async (product) => {
-     if (product.status !== "APPROVED") {
+     if (product.status !== "APPROVED" && product.status === "CREATED") {
        setMessage({
          type: "info",
          text: `Cannot change activity status as product is not approved.`,
@@ -66,13 +66,13 @@ const [showRejectedNote, setShowRejectedNote] = useState("");
        return;
      }
 
-     if (product.pendingChanges) {
-       setMessage({
-         type: "info",
-         text: "Cannot change activity status while there are pending changes.",
-       });
-       return;
-     }
+    //  if (product.pendingChanges) {
+    //    setMessage({
+    //      type: "info",
+    //      text: "Cannot change activity status while there are pending changes.",
+    //    });
+    //    return;
+    //  }
 
     const newAction = product.action === "ACTIVE" ? "INACTIVE" : "ACTIVE";
     const actionText = newAction === "ACTIVE" ? "activate" : "deactivate";

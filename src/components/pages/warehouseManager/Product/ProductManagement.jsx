@@ -98,7 +98,13 @@ const { RangePicker } = DatePicker;
         (item.requestType === "CREATE"
           ? item.createdBy?.email
           : item.updatedBy?.email) || "",
-      dateSubmitted: item.createdAt,
+      dateSubmitted:
+        item.requestType === "CREATE"
+          ? item.createdAt
+          : item.requestType === "UPDATE" ||
+            item.requestType === "STATUS_CHANGE"
+          ? item.updatedAt
+          : item.createdAt,
       status: item.status || "",
       action: item.action || "",
       requestType: item.requestType || "",
