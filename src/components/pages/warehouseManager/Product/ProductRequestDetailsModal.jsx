@@ -374,41 +374,52 @@ const ProductRequestDetailsModal = ({
             {currentRequest.type === "STATUS_CHANGE" &&
               !currentRequest.productDetails?.old &&
               !currentRequest.productDetails?.new && (
-                <Card className="shadow-sm border border-gray-100 p-6 rounded-lg">
-                  <Title level={5} className="mb-4">
-                    Status Change Details
-                  </Title>
+                <Card
+                  title={
+                    <Title level={5} className="text-green-600 mb-0">
+                      Data
+                    </Title>
+                  }
+                  className="shadow-sm border border-green-200 p-4 rounded-lg"
+                >
                   <Descriptions
                     column={1}
                     bordered
                     size="small"
                     className="ant-descriptions-condensed"
                   >
-                    <Descriptions.Item label={<Text strong>Product Name</Text>}>
-                      {currentRequest.productDetails?.name}
-                    </Descriptions.Item>
                     <Descriptions.Item label={<Text strong>Transition</Text>}>
                       <Space>
                         <Tag
                           color={
-                            currentRequest.productDetails?.oldStatus ===
-                            "AVAILABLE"
+                            (currentRequest.status === "APPROVED"
+                              ? currentRequest.productDetails?.newStatus
+                              : currentRequest.productDetails?.oldStatus) ===
+                            "ACTIVE"
                               ? "green"
                               : "red"
                           }
                         >
-                          {currentRequest.productDetails?.oldStatus}
+                          {(currentRequest.status === "APPROVED"
+                            ? currentRequest.productDetails?.newStatus
+                            : currentRequest.productDetails?.oldStatus
+                          )?.toUpperCase() || "N/A"}
                         </Tag>
                         <ArrowRightOutlined style={{ color: "#999" }} />
                         <Tag
                           color={
-                            currentRequest.productDetails?.newStatus ===
-                            "AVAILABLE"
+                            (currentRequest.status === "APPROVED"
+                              ? currentRequest.productDetails?.oldStatus
+                              : currentRequest.productDetails?.newStatus) ===
+                            "ACTIVE"
                               ? "green"
                               : "red"
                           }
                         >
-                          {currentRequest.productDetails?.newStatus}
+                          {(currentRequest.status === "APPROVED"
+                            ? currentRequest.productDetails?.oldStatus
+                            : currentRequest.productDetails?.newStatus
+                          )?.toUpperCase() || "N/A"}
                         </Tag>
                       </Space>
                     </Descriptions.Item>
