@@ -131,8 +131,8 @@ const CategoryManagement = () => {
     },
     {
       title: 'Date Submitted',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
       render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : 'N/A',
       width: '15%',
     },
